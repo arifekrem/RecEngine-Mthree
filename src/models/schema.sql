@@ -27,7 +27,8 @@ CREATE TABLE IF NOT EXISTS processor_records(
 	processor_record_id INT PRIMARY KEY,
     transaction_id INT NOT NULL,
 	`status` ENUM('Pending', 'Success', 'Failed'),
-	received_at DATETIME,
+    amount DECIMAL(18, 4),
+	received_at DATETIME NOT NULL,
     
     FOREIGN KEY(transaction_id) REFERENCES transactions(transaction_id) ON DELETE CASCADE,
     INDEX idx_processor_tx (transaction_id)
@@ -39,7 +40,8 @@ CREATE TABLE IF NOT EXISTS card_network_records(
     network_name VARCHAR(20),
     transaction_id INT NOT NULL,
 	`status` ENUM('Pending', 'Success', 'Failed'),
-	received_at DATETIME,
+    amount DECIMAL(18, 4),
+	received_at DATETIME NOT NULL,
     FOREIGN KEY(transaction_id) REFERENCES transactions(transaction_id) ON DELETE CASCADE,
     INDEX idx_network_tx (transaction_id)
 );
@@ -50,7 +52,7 @@ CREATE TABLE IF NOT EXISTS bank_transaction_records(
     transaction_id INT NOT NULL,
     bank_name VARCHAR(50),
     `status` ENUM('Pending', 'Success', 'Failed'),
-    received_at DATETIME,
+    received_at DATETIME NOT NULL,
     amount DECIMAL(18,4),
     FOREIGN KEY(transaction_id) REFERENCES transactions(transaction_id) ON DELETE CASCADE,
     INDEX idx_bank_tx (transaction_id)

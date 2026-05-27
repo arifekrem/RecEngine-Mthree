@@ -1,0 +1,13 @@
+ * Serving Flask app 'src'
+ * Debug mode: off
+WARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5000
+ * Running on http://172.31.32.120:5000
+Press CTRL+C to quit
+127.0.0.1 - - [27/May/2026 19:45:59] "GET /test_fetching_table_other HTTP/1.1" 200 -
+127.0.0.1 - - [27/May/2026 19:46:11] "GET /test_fetching_table_transaction HTTP/1.1" 200 -
+opening connection
+closing connection
+127.0.0.1 - - [27/May/2026 19:46:27] "GET /test_connections HTTP/1.1" 200 -
+127.0.0.1 - - [27/May/2026 19:46:47] "GET / HTTP/1.1" 200 -
