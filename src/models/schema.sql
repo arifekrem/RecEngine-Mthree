@@ -1,8 +1,8 @@
 
-DROP DATABASE IF EXISTS record_system;
-CREATE DATABASE IF NOT EXISTS record_system;
+DROP DATABASE IF EXISTS reconciliation_db;
+CREATE DATABASE IF NOT EXISTS reconciliation_db;
 
-USE record_system;
+USE reconciliation_db;
 
 /*
 The Customer: The one paying.
