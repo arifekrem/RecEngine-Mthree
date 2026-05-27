@@ -6,17 +6,15 @@
 └── src/
     │
     ├── views/                  # HTTP Routes / Js
-    │   ├── __init__.py
     │   ├── api_routes.py       # endpoints to the JavaScript frontend
     │   └── static_routes.py    # Serves the index.html and static files
     │
     ├── controllers/            # Business Logic Coordination
-    │   ├── __init__.py
     │   ├── reconciliation.py   # reconciliation algorithm (calls methods from models/discrepancy.py). No Sql logic here
     │   └── simulation.py       # generating good and bad transactions (calls methods from models/transaction_db.py). No Sql logic here
     │
     └── models/                 # MODEL LAYER: Database Interactions
-        ├── __init__.py
+        ├── schema.sql          # MySQL schema
         ├── db_pool.py          # MySQL Connector connection pool setup
         ├── transaction_db.py   # SQL executions for reading/writing transactions
         └── discrepancy_db.py   # SQL executions for recording mismatched entries
@@ -46,7 +44,7 @@ GRANT ALL PRIVILEGES ON reconciliation_db.* TO 'rec_user'@'127.0.0.1';
 FLUSH PRIVILEGES;
 EXIT;
 
-mysql -u rec_user -p -h 127.0.0.1 reconciliation_db < schema.sql 
+mysql -u rec_user -p -h 127.0.0.1 reconciliation_db < /path/to/schema.sql 
 password >> 'password'
 
 cd python3 RecEngine-Mthree/app.py
