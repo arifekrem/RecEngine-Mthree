@@ -46,7 +46,7 @@ GRANT ALL PRIVILEGES ON reconciliation_db.* TO 'rec_user'@'127.0.0.1';
 FLUSH PRIVILEGES;
 EXIT;
 
-mysql -u rec_user -p -h 127.0.0.1 reconciliation_db < schema.sql 
+mysql -u rec_user -p -h 127.0.0.1 reconciliation_db < /path/to/schema.sql 
 password >> 'password'
 
 cd python3 RecEngine-Mthree/app.py
