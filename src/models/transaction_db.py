@@ -9,6 +9,7 @@ from src.models.db_pool import get_db_connection
 
 NETWORK_NAMES = ("Visa", "Mastercard", "SWIFT")
 BANK_NAMES = ("Citi", "Chase", "Bank of America", "Wells Fargo")
+PENDING_GOOD_RATE = 0.2
 
 
 def generate_simulation_batch(
@@ -32,8 +33,6 @@ def generate_simulation_batch(
         raise ValueError("chaos_ratio must be between 0 and 1")
 
     rng = random.Random(seed)
-    chaos_target = int(round(total_records * chaos_ratio))
-
     connection = get_db_connection()
     cursor = connection.cursor()
 
@@ -64,7 +63,7 @@ def generate_simulation_batch(
                 received_at=tx_time,
             )
 
-            is_chaos = idx < chaos_target
+            is_chaos = rng.random() < chaos_ratio
             if not is_chaos:
                 _insert_happy_path(cursor, transaction_id, tx_time, amount, rng)
                 counters["good"] += 1
@@ -110,13 +109,15 @@ def _insert_happy_path(cursor, transaction_id: int, tx_time: datetime, amount: f
     processor_time = tx_time + timedelta(seconds=1)
     network_time = processor_time + timedelta(seconds=1)
     bank_time = network_time + timedelta(seconds=1)
+    # A subset of valid records are still in-flight at reconciliation time.
+    happy_status = "Pending" if rng.random() < PENDING_GOOD_RATE else "Success"
 
-    _insert_processor_record(cursor, transaction_id, "Success", processor_time)
+    _insert_processor_record(cursor, transaction_id, happy_status, processor_time)
     _insert_card_network_record(
-        cursor, transaction_id, rng.choice(NETWORK_NAMES), "Success", network_time
+        cursor, transaction_id, rng.choice(NETWORK_NAMES), happy_status, network_time
     )
     _insert_bank_record(
-        cursor, transaction_id, rng.choice(BANK_NAMES), "Success", bank_time, amount
+        cursor, transaction_id, rng.choice(BANK_NAMES), happy_status, bank_time, amount
     )
 
 
