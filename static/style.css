@@ -1,0 +1,271 @@
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background: #f4f6f8;
+}
+
+nav {
+    background: #1f2937;
+    color: white;
+    padding: 15px 30px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+nav h2 {
+    margin: 0;
+}
+
+.nav-links {
+    display: flex;
+    gap: 30px;
+}
+
+.nav-links a {
+    color: white;
+    text-decoration: none;
+}
+
+.nav-links a:hover {
+    color: #93c5fd;
+}
+
+main {
+    padding: 30px;
+}
+
+.page-subtitle {
+    color: #6b7280;
+    margin-top: -10px;
+    margin-bottom: 25px;
+}
+
+.cards {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 15px;
+    margin-bottom: 30px;
+}
+
+.card {
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    border-left: 5px solid #2563eb;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    transition: 0.3s;
+}
+
+.card:hover {
+    transform: translateY(-5px);
+}
+
+.card p {
+    font-size: 30px;
+    font-weight: bold;
+}
+
+.success {
+    border-left-color: #16a34a;
+}
+
+.danger {
+    border-left-color: #dc2626;
+}
+
+.warning {
+    border-left-color: #f59e0b;
+}
+
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: 0.8fr 1.2fr;
+    gap: 25px;
+    align-items: start;
+}
+
+.panel {
+    background: white;
+    padding: 22px;
+    border-radius: 14px;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.07);
+}
+
+.chart-container {
+    max-width: 430px;
+    margin: auto;
+}
+
+.dashboard-action {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.primary-btn {
+    background: #2563eb;
+    padding: 11px 16px;
+    border-radius: 8px;
+    color: white;
+    text-decoration: none;
+    font-weight: bold;
+}
+
+table {
+    width: 100%;
+    background: white;
+    border-collapse: collapse;
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+th, td {
+    padding: 14px;
+    border-bottom: 1px solid #e5e7eb;
+    text-align: left;
+}
+
+th {
+    background: #111827;
+    color: white;
+}
+
+tr:hover {
+    background-color: #f3f4f6;
+}
+
+.status {
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 14px;
+    font-weight: bold;
+    color: white;
+}
+
+.match {
+    background-color: #16a34a;
+}
+
+.amount {
+    background-color: #dc2626;
+}
+
+.missing {
+    background-color: #f59e0b;
+}
+
+.failed {
+    background-color: #7c3aed;
+}
+
+.form-section {
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    margin-bottom: 30px;
+}
+
+form {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(150px, 1fr));
+    gap: 10px;
+}
+
+input {
+    padding: 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+}
+
+button {
+    padding: 12px;
+    border: none;
+    border-radius: 8px;
+    background: #2563eb;
+    color: white;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+button:hover {
+    opacity: 0.9;
+}
+
+.edit-btn {
+    background: #f59e0b;
+    margin-right: 5px;
+}
+
+.delete-btn {
+    background: #dc2626;
+}
+
+.search-box {
+    width: 300px;
+    padding: 12px;
+    margin-bottom: 20px;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+}
+
+.filters {
+    display: flex;
+    gap: 10px;
+    margin: 20px 0;
+}
+
+.empty-message {
+    margin-top: 20px;
+    padding: 15px;
+    background: #dcfce7;
+    color: #166534;
+    border-radius: 8px;
+    font-weight: bold;
+}
+
+@media (max-width: 900px) {
+    .cards {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .dashboard-grid {
+        grid-template-columns: 1fr;
+    }
+
+    form {
+        grid-template-columns: 1fr;
+    }
+}
+
+.flow-section {
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    margin-bottom: 30px;
+}
+
+.flow {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 15px;
+}
+
+.flow-step {
+    padding: 15px;
+    background: #e5e7eb;
+    border-radius: 10px;
+    text-align: center;
+    font-weight: bold;
+}
+
+.flow-step.active {
+    background: #2563eb;
+    color: white;
+}
+
+.flow-note {
+    color: #6b7280;
+    margin-top: 15px;
+}

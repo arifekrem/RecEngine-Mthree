@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Transaction Reconciliation Dashboard</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+<nav>
+    <h2>Transaction Reconciliation Engine</h2>
+
+    <div class="nav-links">
+        <a href="index.html">Dashboard</a>
+        <a href="transactions.html">Transactions</a>
+        <a href="reconciliation.html">Reconciliation</a>
+    </div>
+</nav>
+
+<main>
+    <h1>Dashboard</h1>
+
+    <p class="page-subtitle">
+        Monitor transaction health, mismatch categories, and reconciliation results.
+    </p>
+
+    <section class="cards">
+        <div class="card">
+            <h3>Total Transactions</h3>
+            <p id="totalTransactions">0</p>
+        </div>
+
+        <div class="card success">
+            <h3>Matches</h3>
+            <p id="matches">0</p>
+        </div>
+
+        <div class="card danger">
+            <h3>Mismatches</h3>
+            <p id="mismatches">0</p>
+        </div>
+
+        <div class="card warning">
+            <h3>Pending</h3>
+            <p id="pending">0</p>
+        </div>
+    </section>
+
+    <div class="dashboard-grid">
+
+        <div class="panel">
+            <h2>Transaction Statistics</h2>
+
+            <div class="chart-container">
+                <canvas id="transactionChart"></canvas>
+            </div>
+        </div>
+
+        <div class="panel">
+            <div class="dashboard-action">
+                <h2>Recent Reconciliation Results</h2>
+                <a href="reconciliation.html" class="primary-btn">Run Reconciliation</a>
+            </div>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Transaction ID</th>
+                        <th>Status</th>
+                        <th>Issue</th>
+                    </tr>
+                </thead>
+
+                <tbody id="resultsTable"></tbody>
+            </table>
+        </div>
+
+    </div>
+</main>
+
+<script src="/static/js/dashboard.js"></script>
+</body>
+</html>
