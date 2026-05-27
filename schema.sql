@@ -29,7 +29,8 @@ CREATE TABLE IF NOT EXISTS processor_records(
 	`status` ENUM('Pending', 'Success', 'Failed'),
 	received_at DATETIME,
     
-    FOREIGN KEY(transaction_id) REFERENCES transactions(transaction_id)
+    FOREIGN KEY(transaction_id) REFERENCES transactions(transaction_id) ON DELETE CASCADE,
+    INDEX idx_processor_tx (transaction_id)
 );
 
 -- (VISA, Mastercard, ...) receives request from processor and finds bank to route it to.
@@ -39,7 +40,8 @@ CREATE TABLE IF NOT EXISTS card_network_records(
     transaction_id INT NOT NULL,
 	`status` ENUM('Pending', 'Success', 'Failed'),
 	received_at DATETIME,
-    FOREIGN KEY(transaction_id) REFERENCES transactions(transaction_id)
+    FOREIGN KEY(transaction_id) REFERENCES transactions(transaction_id) ON DELETE CASCADE,
+    INDEX idx_network_tx (transaction_id)
 );
 
 -- the bank that receives the funds
@@ -50,7 +52,8 @@ CREATE TABLE IF NOT EXISTS bank_transaction_records(
     `status` ENUM('Pending', 'Success', 'Failed'),
     received_at DATETIME,
     amount DECIMAL(18,4),
-    FOREIGN KEY(transaction_id) REFERENCES transactions(transaction_id)
+    FOREIGN KEY(transaction_id) REFERENCES transactions(transaction_id) ON DELETE CASCADE,
+    INDEX idx_bank_tx (transaction_id)
 );
 
 /* GOOD TRANSACTIONS:
@@ -64,7 +67,7 @@ CREATE TABLE IF NOT EXISTS reconciliation_runs(
 	id INT PRIMARY KEY AUTO_INCREMENT,
 	start_time DATETIME NOT NULL,
     end_time DATETIME,
-    records_checked INT,
+    records_checked INT DEFAULT 0,
     num_mismatches INT DEFAULT 0
 );
 
@@ -80,8 +83,8 @@ CREATE TABLE IF NOT EXISTS reconciliation_results(
         'OrderMismatch' -- this can happen for ex: because transactions 
 						-- start being processed by different tables at the same time
     ) DEFAULT 'Match',
-    FOREIGN KEY (run_id) REFERENCES reconciliation_runs(id),
-    FOREIGN KEY (transaction_id) REFERENCES transactions(transaction_id)
+    FOREIGN KEY (run_id) REFERENCES reconciliation_runs(id) ON DELETE CASCADE,
+    FOREIGN KEY (transaction_id) REFERENCES transactions(transaction_id) ON DELETE CASCADE
 );
 
 
