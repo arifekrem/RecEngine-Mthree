@@ -32,47 +32,65 @@ RECENGINE-MTHREE/
 ├── requirements.txt
 ```
 
-### Ec2 instance configuration, and how to run
+### EC2 instance configuration and run instructions
 
-### Do this once in your EC2 instance:
-```
-# install mariadb in container
+### One-time setup on EC2 instance
+
+```bash
+# Install MariaDB
 sudo dnf install -y mariadb105-server
 sudo systemctl start mariadb
 sudo systemctl enable mariadb
 sudo mysql -u root
 
-# install docker
+# Install Docker
 sudo dnf install -y docker
 sudo systemctl start docker
 sudo systemctl enable docker
 sudo usermod -aG docker $USER
 newgrp docker
 
-# install docker compose
+# Install Docker Compose
 sudo curl -SL https://github.com/docker/compose/releases/latest/download/docker-compose-linux-$(uname -m) -o /usr/libexec/docker/cli-plugins/docker-compose
 sudo chmod +x /usr/libexec/docker/cli-plugins/docker-compose
 docker compose version
 
-# buildx version for docker (if you dont do that = error)
+# Install buildx (required; missing causes errors)
 mkdir -p ~/.docker/cli-plugins
 BUILDX_VERSION=$(curl -s https://api.github.com/repos/docker/buildx/releases/latest | grep -oP '"tag_name": "\K[^"]+')
-curl -L https://github.com/docker/buildx/releases/download/${BUILDX_VERSION}/buildx-${BUILDX_VERSION}.linux-amd64   -o ~/.docker/cli-plugins/docker-buildx
+curl -L https://github.com/docker/buildx/releases/download/${BUILDX_VERSION}/buildx-${BUILDX_VERSION}.linux-amd64 -o ~/.docker/cli-plugins/docker-buildx
 chmod +x ~/.docker/cli-plugins/docker-buildx
 docker buildx version
 ```
-### Now to run the container
-```
-# run containers:
+
+### Run containers
+
+```bash
 docker compose up -d --build && docker image prune -f
+```
 
-# check containers
+### Check running containers
+
+```bash
 docker ps
+```
 
-# You can visit http://your-public-ip/index (need to allow inbound rules to port 80 in ec2 console)
-# Or curl http://localhost/index in ec2 terminal to check locally
+Access:
 
-# stop containers:
+* [http://your-public-ip/index](http://your-public-ip/index) (requires EC2 inbound rule on port 80)
+* or locally: `curl http://localhost/index`
+
+### Logs (HTTP requests + application / DB errors)
+
+```bash
+docker compose logs -f flask
+```
+
+### Stop containers
+
+```bash
 docker compose down -v
 ```
+
+
 
