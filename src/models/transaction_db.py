@@ -4,7 +4,14 @@ import random
 from datetime import datetime, timedelta
 from typing import Dict, Optional
 
-from src.models.db_pool import get_db_connection
+from .db_pool import get_db_connection
+
+ALLOWED_TABLES = {
+    "transactions",
+    "processor_records",
+    "card_network_records",
+    "bank_transaction_records"
+}
 
 
 NETWORK_NAMES = ("Visa", "Mastercard", "SWIFT")
@@ -181,10 +188,10 @@ def _insert_chaos_path(
 def _insert_processor_record(cursor, transaction_id: int, status: str, received_at: datetime) -> None:
     cursor.execute(
         """
-        INSERT INTO processor_records (processor_record_id, transaction_id, status, received_at)
-        VALUES (%s, %s, %s, %s)
+        INSERT INTO processor_records (transaction_id, status, received_at)
+        VALUES (%s, %s, %s)
         """,
-        (transaction_id, transaction_id, status, received_at),
+        (transaction_id, status, received_at),
     )
 
 
@@ -198,10 +205,10 @@ def _insert_card_network_record(
     cursor.execute(
         """
         INSERT INTO card_network_records
-        (card_network_record_id, network_name, transaction_id, status, received_at)
-        VALUES (%s, %s, %s, %s, %s)
+        (network_name, transaction_id, status, received_at)
+        VALUES (%s, %s, %s, %s)
         """,
-        (transaction_id, network_name, transaction_id, status, received_at),
+        (network_name, transaction_id, status, received_at),
     )
 
 
@@ -216,8 +223,21 @@ def _insert_bank_record(
     cursor.execute(
         """
         INSERT INTO bank_transaction_records
-        (bank_record_id, transaction_id, bank_name, status, received_at, amount)
-        VALUES (%s, %s, %s, %s, %s, %s)
+        (transaction_id, bank_name, status, received_at, amount)
+        VALUES (%s, %s, %s, %s, %s)
         """,
-        (transaction_id, transaction_id, bank_name, status, received_at, amount),
+        (transaction_id, bank_name, status, received_at, amount),
     )
+
+def _fetch_table_records(table_name):
+    try:
+        connection = get_db_connection()
+        cursor = connection.cursor(dictionary = True)
+        
+        # No sql injections because table name is whitelisted, and col_str is not accessible by users.
+        cursor.execute(f"SELECT * FROM {table_name}") 
+        table_data = cursor.fetchall() # a dictionary
+        return table_data
+    finally:
+        cursor.close()
+        connection.close()
