@@ -10,23 +10,23 @@ def home():
     return "<h1>Welcome to the lab</h1>"
 
 @api_bp.route("/transactions")
-def test_transaction_table_fetch():
+def test_transactions_fetch():
     table_dict = _fetch_table_records("transactions")
     return jsonify(table_dict), 200
 
 @api_bp.route("/processor_records")
-def test_other_table_fetch():
+def test_processors_fetch():
     table_dict = _fetch_table_records("processor_records")
     return jsonify(table_dict), 200
 
 @api_bp.route("/card_network_records")
-def test_other_table_fetch():
-    table_dict = _fetch_table_records("processor_records")
+def test_cards_fetch():
+    table_dict = _fetch_table_records("card_network_records")
     return jsonify(table_dict), 200
 
 @api_bp.route("/bank_transaction_records")
-def test_other_table_fetch():
-    table_dict = _fetch_table_records("processor_records")
+def test_banks_fetch():
+    table_dict = _fetch_table_records("bank_transaction_records")
     return jsonify(table_dict), 200
 
 
