@@ -62,5 +62,11 @@ docker buildx version
 
 docker compose up -d --build && docker image prune -f
 docker compose down -v
+
+# check containers
+docker ps
+
+# You can visit http://your-public-ip/index (need to allow inbound rules to port 80 in ec2 console)
+# Or curl http://localhost/index in ec2 terminal to check locally
 ```
 
