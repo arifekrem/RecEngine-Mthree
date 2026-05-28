@@ -5,13 +5,6 @@ const dashboardData = {
     pending: 8
 };
 
-const results = [
-    { transactionId: 1, status: "Match", issue: "None" },
-    { transactionId: 2, status: "AmountMismatch", issue: "Bank amount is different" },
-    { transactionId: 3, status: "MissingDownstream", issue: "Missing bank record" },
-    { transactionId: 4, status: "StatusMismatch", issue: "Processor success but bank failed" }
-];
-
 document.getElementById("totalTransactions").innerText = dashboardData.totalTransactions;
 document.getElementById("matches").innerText = dashboardData.matches;
 document.getElementById("mismatches").innerText = dashboardData.mismatches;
@@ -37,21 +30,29 @@ function getStatusClass(status) {
 }
 
 
-results.forEach(result => {
-    const row = document.createElement("tr");
+async function loadResults() {
+    const response = await fetch("/api/display_recent_reconciliation_results");
+    const results = await response.json();
+    // Recent reconciliation results should empty previus reconciliation results
+    tableBody.innerHTML = "";
+    results.forEach(result => {
+        const row = document.createElement("tr");
 
-    row.innerHTML = `
-        <td>${result.transactionId}</td>
-        <td>
-            <span class="status ${getStatusClass(result.status)}">
-        ${result.status}
-            </span>
-        </td>
-        <td>${result.issue}</td>
-    `;
+        row.innerHTML = `
+            <td>${result.transaction_id}</td>
+            <td>
+                <span class="status ${getStatusClass(result.status)}">
+            ${result.status}
+                </span>
+            </td>
+            <td>${result.issue}</td>
+        `;
 
-    tableBody.appendChild(row);
-});
+        tableBody.appendChild(row);
+    });   
+}
+
+loadResults();
 
 const ctx = document.getElementById('transactionChart');
 
