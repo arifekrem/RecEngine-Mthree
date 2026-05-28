@@ -39,9 +39,12 @@ services: # Different containers to compose
       DB_USER: rec_user
       DB_PASSWORD: xkir23
       DB_NAME: reconciliation_db
+      PYTHONUNBUFFERED: "1"
 
-    command: gunicorn --bind 0.0.0.0:5000 --workers 4 "app:app" # overrite CMD in Dockerfile
-                                                                # Run 4 workers of the Flask app in app.py, listen for connections on :5000 (nginx will forward to that port from :80)
+    # Run 4 workers of the Flask app in app.py, listen for connections on :5000 (nginx will forward to that port from :80)
+    command: gunicorn app:app --bind 0.0.0.0:5000 --workers 4 --access-logfile - --error-logfile - --capture-output --log-level debug
+    # docker compose logs -f flask                       
+
     networks: # join this container on the my-network and alias it
       my-network:
         aliases:

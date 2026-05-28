@@ -1,7 +1,7 @@
 let transactionChart;
 
 async function loadDashboard() {
-    const response = await fetch("/reconciliation_results");
+    const response = await fetch("/api/reconciliation_results");
     const results = await response.json();
 
     const totalTransactions = results.length;

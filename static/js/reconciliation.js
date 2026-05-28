@@ -5,12 +5,12 @@ const table = document.getElementById("reconciliationTable");
 const emptyMessage = document.getElementById("emptyMessage");
 
 runBtn.addEventListener("click", async function() {
-    await fetch("/run_reconciliation");
+    await fetch("/api/run_reconciliation");
     await loadReconciliationResults();
 });
 
 async function loadReconciliationResults() {
-    const response = await fetch("/reconciliation_results");
+    const response = await fetch("/api/reconciliation_results");
     reconciliationResults = await response.json();
 
     displayResults(reconciliationResults);

@@ -7,7 +7,7 @@ const searchInput = document.getElementById("searchInput");
 const submitButton = form.querySelector("button");
 
 async function loadTransactions() {
-    const response = await fetch("/transactions_data");
+    const response = await fetch("/api/display_transactions");
     transactions = await response.json();
 
     renderTransactions();
