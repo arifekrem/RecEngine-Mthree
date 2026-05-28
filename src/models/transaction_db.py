@@ -116,7 +116,19 @@ def generate_simulation_batch(
     finally:
         cursor.close()
         connection.close()
-
+        
+def fetch_table_records(table_name):
+    try:
+        connection = get_db_connection()
+        cursor = connection.cursor(dictionary = True)
+        
+        # No sql injections because table name is whitelisted, and col_str is not accessible by users.
+        cursor.execute(f"SELECT * FROM {table_name}") 
+        table_data = cursor.fetchall() # a dictionary
+        return table_data
+    finally:
+        cursor.close()
+        connection.close()
 
 def _insert_transaction(cursor, customer_id: int, business_id: int, amount: float, received_at: datetime) -> int:
     cursor.execute(
