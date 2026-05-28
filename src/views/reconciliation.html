@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Reconciliation</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<nav>
+    <h2>Transaction Reconciliation Engine</h2>
+
+    <div class="nav-links">
+        <a href="index.html">Dashboard</a>
+        <a href="transactions.html">Transactions</a>
+        <a href="reconciliation.html">Reconciliation</a>
+    </div>
+</nav>
+
+<main>
+    <h1>Reconciliation</h1>
+
+    <button id="runBtn">Run Reconciliation</button>
+
+    <h2>Reconciliation Results</h2>
+<div class="filters">
+    <button onclick="filterResults('All')">All</button>
+    <button onclick="filterResults('Mismatch')">Only Mismatches</button>
+    <button onclick="filterResults('StatusMismatch')">Only Failed/Status</button>
+    <input type="date" id="dateFilter" onchange="applyDateFilter()">
+</div>
+
+<p id="emptyMessage" class="empty-message"></p>
+    <table>
+        <thead>
+            <tr>
+                <th>Transaction ID</th>
+                <th>Status</th>
+                <th>Description</th>
+            </tr>
+        </thead>
+        <tbody id="reconciliationTable"></tbody>
+    </table>
+</main>
+
+<script src="js/reconciliation.js"></script>
+</body>
+</html>
