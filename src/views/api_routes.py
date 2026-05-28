@@ -1,5 +1,5 @@
 from flask import Blueprint, jsonify, request, Response, render_template
-from src.models.transaction_db import _fetch_table_records
+from src.models.transaction_db import _fetch_table_records, insert_transaction, delete_transaction, update_transaction
 from src.controllers.simulate import run_simulation
 from src.controllers.reconcile import run_reconciliation_process
 from pathlib import Path
@@ -66,3 +66,53 @@ def test_reconciliation_run():
     simulation_batch = run_reconciliation_process()
 
     return jsonify(simulation_batch), 200
+
+
+@api_bp.route("/transactions_data")
+def transactions_data():
+
+    table_dict = _fetch_table_records("transactions")
+
+    return jsonify(table_dict), 200
+
+@api_bp.route("/add_transaction", methods=["POST"])
+def add_transaction():
+    data = request.get_json()
+
+    transaction_id = insert_transaction(
+        data["customer_id"],
+        data["business_id"],
+        data["amount"],
+        data["received_at"]
+    )
+
+    return jsonify({
+        "message": "Transaction added successfully",
+        "transaction_id": transaction_id
+    }), 201
+
+@api_bp.route("/delete_transaction/<int:transaction_id>", methods=["DELETE"])
+def delete_transaction_route(transaction_id):
+    rows_deleted = delete_transaction(transaction_id)
+
+    return jsonify({
+        "message": "Transaction deleted successfully",
+        "rows_deleted": rows_deleted
+    }), 200
+
+@api_bp.route("/update_transaction/<int:transaction_id>", methods=["PUT"])
+def update_transaction_route(transaction_id):
+    data = request.get_json()
+
+    rows_updated = update_transaction(
+        transaction_id,
+        data["customer_id"],
+        data["business_id"],
+        data["amount"],
+        data["received_at"]
+    )
+
+    return jsonify({
+        "message": "Transaction updated successfully",
+        "rows_updated": rows_updated
+    }), 200

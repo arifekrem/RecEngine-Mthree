@@ -104,7 +104,7 @@ def generate_simulation_batch(
 def _insert_transaction(cursor, customer_id: int, business_id: int, amount: float, received_at: datetime) -> int:
     cursor.execute(
         """
-        INSERT INTO transactions (customer_id, buisness_id, amount, received_at)
+        INSERT INTO transactions (customer_id, business_id, amount, received_at)
         VALUES (%s, %s, %s, %s)
         """,
         (customer_id, business_id, amount, received_at),
@@ -238,6 +238,70 @@ def _fetch_table_records(table_name):
         cursor.execute(f"SELECT * FROM {table_name}") 
         table_data = cursor.fetchall() # a dictionary
         return table_data
+    finally:
+        cursor.close()
+        connection.close()
+
+
+def insert_transaction(customer_id, business_id, amount, received_at):
+    try:
+        connection = get_db_connection()
+        cursor = connection.cursor()
+
+        query = """
+        INSERT INTO transactions (customer_id, business_id, amount, received_at)
+        VALUES (%s, %s, %s, %s)
+        """
+
+        cursor.execute(query, (customer_id, business_id, amount, received_at))
+        connection.commit()
+
+        return cursor.lastrowid
+
+    finally:
+        cursor.close()
+        connection.close()
+
+
+def delete_transaction(transaction_id):
+    try:
+        connection = get_db_connection()
+        cursor = connection.cursor()
+
+        cursor.execute(
+            "DELETE FROM transactions WHERE transaction_id = %s",
+            (transaction_id,)
+        )
+
+        connection.commit()
+
+        return cursor.rowcount
+
+    finally:
+        cursor.close()
+        connection.close()    
+
+def update_transaction(transaction_id, customer_id, business_id, amount, received_at):
+    try:
+        connection = get_db_connection()
+        cursor = connection.cursor()
+
+        cursor.execute(
+            """
+            UPDATE transactions
+            SET customer_id = %s,
+                business_id = %s,
+                amount = %s,
+                received_at = %s
+            WHERE transaction_id = %s
+            """,
+            (customer_id, business_id, amount, received_at, transaction_id)
+        )
+
+        connection.commit()
+
+        return cursor.rowcount
+
     finally:
         cursor.close()
         connection.close()
