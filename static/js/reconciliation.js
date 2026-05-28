@@ -1,43 +1,26 @@
-const reconciliationResults = [
-    {
-        transaction_id: 1,
-        status: "Match",
-        description: "Transaction matched across all systems",
-        date: "2026-05-27"
-    },
-    {
-        transaction_id: 2,
-        status: "AmountMismatch",
-        description: "Bank amount does not match original transaction",
-        date: "2026-05-27"
-    },
-    {
-        transaction_id: 3,
-        status: "MissingDownstream",
-        description: "Transaction is missing from bank records",
-        date: "2026-05-28"
-    },
-    {
-        transaction_id: 4,
-        status: "StatusMismatch",
-        description: "Processor success but bank failed",
-        date: "2026-05-28"
-    }
-];
+let reconciliationResults = [];
 
 const runBtn = document.getElementById("runBtn");
 const table = document.getElementById("reconciliationTable");
 const emptyMessage = document.getElementById("emptyMessage");
 
-runBtn.addEventListener("click", function() {
-    displayResults(reconciliationResults);
+runBtn.addEventListener("click", async function() {
+    await fetch("/run_reconciliation");
+    await loadReconciliationResults();
 });
+
+async function loadReconciliationResults() {
+    const response = await fetch("/reconciliation_results");
+    reconciliationResults = await response.json();
+
+    displayResults(reconciliationResults);
+}
 
 function displayResults(results) {
     table.innerHTML = "";
     emptyMessage.innerText = "";
 
-    if (results.length === 0) {
+    if (!results || results.length === 0) {
         emptyMessage.innerText =
             "No mismatches found. All systems reconciled successfully.";
         return;
@@ -53,7 +36,7 @@ function displayResults(results) {
                     ${result.status}
                 </span>
             </td>
-            <td>${result.description}</td>
+            <td>${getDescription(result.status)}</td>
         `;
 
         table.appendChild(row);
@@ -67,29 +50,19 @@ function filterResults(type) {
     }
 
     if (type === "Mismatch") {
-        const mismatches = reconciliationResults.filter(
-            result => result.status !== "Match"
+        displayResults(
+            reconciliationResults.filter(result => result.status !== "Match")
         );
-
-        displayResults(mismatches);
         return;
     }
 
-    const filtered = reconciliationResults.filter(
-        result => result.status === type
+    displayResults(
+        reconciliationResults.filter(result => result.status === type)
     );
-
-    displayResults(filtered);
 }
 
 function applyDateFilter() {
-    const selectedDate = document.getElementById("dateFilter").value;
-
-    const filtered = reconciliationResults.filter(
-        result => result.date === selectedDate
-    );
-
-    displayResults(filtered);
+    alert("Date filter needs received_at in reconciliation_results first.");
 }
 
 function getStatusClass(status) {
@@ -98,3 +71,15 @@ function getStatusClass(status) {
     if (status === "MissingDownstream") return "missing";
     return "failed";
 }
+
+function getDescription(status) {
+    if (status === "Match") return "Transaction matched across all systems";
+    if (status === "AmountMismatch") return "Bank amount does not match original transaction";
+    if (status === "MissingDownstream") return "Transaction is missing from one downstream table";
+    if (status === "StatusMismatch") return "Processor, card network, and bank statuses do not match";
+    if (status === "OrderMismatch") return "Transaction timestamps are not in the correct order";
+
+    return "Unknown reconciliation issue";
+}
+
+loadReconciliationResults();
