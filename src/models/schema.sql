@@ -16,7 +16,7 @@ The Bank (Issuing and acquiring): Bank that gives approval and receives funds
 CREATE TABLE IF NOT EXISTS transactions(
 	transaction_id INT PRIMARY KEY AUTO_INCREMENT,
 	customer_id INT,
-    buisness_id INT, -- WHERE they're purchasing from
+    business_id INT, -- WHERE they're purchasing from
     amount DECIMAL(18, 4),
     received_at DATETIME NOT NULL
     

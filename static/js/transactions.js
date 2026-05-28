@@ -1,25 +1,19 @@
-let transactions = [
-    {
-        transaction_id: 1,
-        customer_id: 101,
-        business_id: 501,
-        amount: 120.50,
-        received_at: "2026-05-27 10:30"
-    },
-    {
-        transaction_id: 2,
-        customer_id: 102,
-        business_id: 502,
-        amount: 75.25,
-        received_at: "2026-05-27 11:00"
-    }
-];
+let transactions = [];
+let editingTransactionId = null;
 
 const tableBody = document.getElementById("transactionsTable");
 const form = document.getElementById("transactionForm");
 const searchInput = document.getElementById("searchInput");
+const submitButton = form.querySelector("button");
 
-function loadTransactions() {
+async function loadTransactions() {
+    const response = await fetch("/transactions_data");
+    transactions = await response.json();
+
+    renderTransactions();
+}
+
+function renderTransactions() {
     tableBody.innerHTML = "";
 
     const searchValue = searchInput.value;
@@ -38,8 +32,13 @@ function loadTransactions() {
             <td>$${transaction.amount}</td>
             <td>${transaction.received_at}</td>
             <td>
-                <button class="edit-btn" onclick="editTransaction(${transaction.transaction_id})">Edit</button>
-                <button class="delete-btn" onclick="deleteTransaction(${transaction.transaction_id})">Delete</button>
+                <button class="edit-btn" onclick="editTransaction(${transaction.transaction_id})">
+                    Edit
+                </button>
+
+                <button class="delete-btn" onclick="deleteTransaction(${transaction.transaction_id})">
+                    Delete
+                </button>
             </td>
         `;
 
@@ -47,53 +46,86 @@ function loadTransactions() {
     });
 }
 
-searchInput.addEventListener("input", loadTransactions);
+function editTransaction(id) {
+    const transaction = transactions.find(t => t.transaction_id === id);
 
-form.addEventListener("submit", function(event) {
+    if (!transaction) return;
+
+    editingTransactionId = id;
+
+    document.getElementById("customerId").value = transaction.customer_id;
+    document.getElementById("businessId").value = transaction.business_id;
+    document.getElementById("amount").value = transaction.amount;
+
+    const date = new Date(transaction.received_at);
+    const formattedDate = date.toISOString().slice(0, 16);
+    document.getElementById("receivedAt").value = formattedDate;
+
+    submitButton.innerText = "Update Transaction";
+}
+
+async function deleteTransaction(id) {
+    const confirmed = confirm("Are you sure you want to delete this transaction?");
+
+    if (!confirmed) return;
+
+    await fetch(`/delete_transaction/${id}`, {
+        method: "DELETE"
+    });
+
+    loadTransactions();
+}
+
+searchInput.addEventListener("input", renderTransactions);
+
+form.addEventListener("submit", async function(event) {
     event.preventDefault();
 
-    const newTransaction = {
-        transaction_id: transactions.length + 1,
+    const transactionData = {
         customer_id: document.getElementById("customerId").value,
         business_id: document.getElementById("businessId").value,
         amount: document.getElementById("amount").value,
         received_at: document.getElementById("receivedAt").value
     };
 
-    transactions.push(newTransaction);
+    if (editingTransactionId) {
+        const response = await fetch(`/update_transaction/${editingTransactionId}`, {
+            method: "PUT",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(transactionData)
+        });
+
+        const data = await response.json();
+        alert(data.message);
+
+        editingTransactionId = null;
+        submitButton.innerText = "Add Transaction";
+    } else {
+        const response = await fetch("/add_transaction", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(transactionData)
+        });
+
+        const data = await response.json();
+        if (!response.ok) {
+            const stage = data.failed_stage ? ` (failed at: ${data.failed_stage})` : "";
+            alert(`${data.message || data.error}${stage}`);
+        } else {
+            const stageSummary = data.stages
+                ? Object.keys(data.stages).join(" → ")
+                : "";
+            console.log("Pipeline stages:", data.stages);
+            alert(`${data.message}\nStages: ${stageSummary}`);
+        }
+    }
+
     form.reset();
     loadTransactions();
 });
-
-function deleteTransaction(id) {
-    const confirmed = confirm("Are you sure you want to delete this transaction?");
-
-    if (!confirmed) {
-        return;
-    }
-
-    transactions = transactions.filter(
-        transaction => transaction.transaction_id !== id
-    );
-
-    loadTransactions();
-}
-
-function editTransaction(id) {
-    const transaction = transactions.find(
-        transaction => transaction.transaction_id === id
-    );
-
-    document.getElementById("customerId").value = transaction.customer_id;
-    document.getElementById("businessId").value = transaction.business_id;
-    document.getElementById("amount").value = transaction.amount;
-    document.getElementById("receivedAt").value = transaction.received_at;
-
-    transactions = transactions.filter(
-        transaction => transaction.transaction_id !== id
-    );
-
-    loadTransactions();
-}
 
 loadTransactions();
