@@ -112,7 +112,16 @@ form.addEventListener("submit", async function(event) {
         });
 
         const data = await response.json();
-        alert(data.message);
+        if (!response.ok) {
+            const stage = data.failed_stage ? ` (failed at: ${data.failed_stage})` : "";
+            alert(`${data.message || data.error}${stage}`);
+        } else {
+            const stageSummary = data.stages
+                ? Object.keys(data.stages).join(" → ")
+                : "";
+            console.log("Pipeline stages:", data.stages);
+            alert(`${data.message}\nStages: ${stageSummary}`);
+        }
     }
 
     form.reset();

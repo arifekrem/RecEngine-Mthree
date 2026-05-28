@@ -1,10 +1,27 @@
 from __future__ import annotations
 
+import logging
 import random
 from datetime import datetime, timedelta
-from typing import Dict, Optional
+from typing import Any, Dict, Optional, Union
 
 from .db_pool import get_db_connection
+
+logger = logging.getLogger(__name__)
+
+
+class TransactionPipelineError(Exception):
+    """Raised when transaction processing fails at a named pipeline stage."""
+
+    def __init__(
+        self,
+        stage: str,
+        message: str,
+        transaction_id: Optional[int] = None,
+    ) -> None:
+        self.stage = stage
+        self.transaction_id = transaction_id
+        super().__init__(message)
 
 ALLOWED_TABLES = {
     "transactions",
@@ -112,19 +129,125 @@ def _insert_transaction(cursor, customer_id: int, business_id: int, amount: floa
     return int(cursor.lastrowid)
 
 
-def _insert_happy_path(cursor, transaction_id: int, tx_time: datetime, amount: float, rng: random.Random) -> None:
+def _coerce_datetime(value: Union[datetime, str]) -> datetime:
+    if isinstance(value, datetime):
+        return value
+    if isinstance(value, str):
+        normalized = value.replace("Z", "+00:00")
+        try:
+            return datetime.fromisoformat(normalized)
+        except ValueError:
+            return datetime.strptime(value, "%Y-%m-%d %H:%M:%S")
+    raise TypeError(f"received_at must be datetime or str, got {type(value).__name__}")
+
+
+def _propagate_transaction_pipeline(
+    cursor,
+    transaction_id: int,
+    tx_time: datetime,
+    amount: float,
+    *,
+    status: str = "Success",
+    network_name: Optional[str] = None,
+    bank_name: Optional[str] = None,
+    rng: Optional[random.Random] = None,
+) -> Dict[str, Dict[str, Any]]:
+    """
+    Stages 2–4: processor → card network → bank.
+    Returns metadata for each downstream stage (for API responses and logging).
+    """
     processor_time = tx_time + timedelta(seconds=1)
     network_time = processor_time + timedelta(seconds=1)
     bank_time = network_time + timedelta(seconds=1)
+
+    pick_rng = rng or random.Random()
+    network = network_name or pick_rng.choice(NETWORK_NAMES)
+    bank = bank_name or pick_rng.choice(BANK_NAMES)
+
+    stages: Dict[str, Dict[str, Any]] = {}
+
+    try:
+        processor_record_id = _insert_processor_record(
+            cursor, transaction_id, status, processor_time
+        )
+        stages["processor_record"] = {
+            "status": "ok",
+            "processor_record_id": processor_record_id,
+            "record_status": status,
+            "received_at": processor_time.isoformat(sep=" "),
+        }
+        logger.info(
+            "Stage 2 complete: processor_record_id=%s transaction_id=%s",
+            processor_record_id,
+            transaction_id,
+        )
+    except Exception as exc:
+        raise TransactionPipelineError(
+            "processor_record",
+            f"Failed to create processor record: {exc}",
+            transaction_id,
+        ) from exc
+
+    try:
+        card_network_record_id = _insert_card_network_record(
+            cursor, transaction_id, network, status, network_time
+        )
+        stages["card_network_record"] = {
+            "status": "ok",
+            "card_network_record_id": card_network_record_id,
+            "network_name": network,
+            "record_status": status,
+            "received_at": network_time.isoformat(sep=" "),
+        }
+        logger.info(
+            "Stage 3 complete: card_network_record_id=%s transaction_id=%s",
+            card_network_record_id,
+            transaction_id,
+        )
+    except Exception as exc:
+        raise TransactionPipelineError(
+            "card_network_record",
+            f"Failed to create card network record: {exc}",
+            transaction_id,
+        ) from exc
+
+    try:
+        bank_record_id = _insert_bank_record(
+            cursor, transaction_id, bank, status, bank_time, amount
+        )
+        stages["bank_record"] = {
+            "status": "ok",
+            "bank_record_id": bank_record_id,
+            "bank_name": bank,
+            "record_status": status,
+            "received_at": bank_time.isoformat(sep=" "),
+            "amount": float(amount),
+        }
+        logger.info(
+            "Stage 4 complete: bank_record_id=%s transaction_id=%s",
+            bank_record_id,
+            transaction_id,
+        )
+    except Exception as exc:
+        raise TransactionPipelineError(
+            "bank_record",
+            f"Failed to create bank record: {exc}",
+            transaction_id,
+        ) from exc
+
+    return stages
+
+
+def _insert_happy_path(cursor, transaction_id: int, tx_time: datetime, amount: float, rng: random.Random) -> None:
     # A subset of valid records are still in-flight at reconciliation time.
     happy_status = "Pending" if rng.random() < PENDING_GOOD_RATE else "Success"
-
-    _insert_processor_record(cursor, transaction_id, happy_status, processor_time)
-    _insert_card_network_record(
-        cursor, transaction_id, rng.choice(NETWORK_NAMES), happy_status, network_time
-    )
-    _insert_bank_record(
-        cursor, transaction_id, rng.choice(BANK_NAMES), happy_status, bank_time, amount
+    _propagate_transaction_pipeline(
+        cursor,
+        transaction_id,
+        tx_time,
+        amount,
+        status=happy_status,
+        rng=rng,
     )
 
 
@@ -185,7 +308,7 @@ def _insert_chaos_path(
     )
 
 
-def _insert_processor_record(cursor, transaction_id: int, status: str, received_at: datetime) -> None:
+def _insert_processor_record(cursor, transaction_id: int, status: str, received_at: datetime) -> int:
     cursor.execute(
         """
         INSERT INTO processor_records (transaction_id, status, received_at)
@@ -193,6 +316,7 @@ def _insert_processor_record(cursor, transaction_id: int, status: str, received_
         """,
         (transaction_id, status, received_at),
     )
+    return int(cursor.lastrowid)
 
 
 def _insert_card_network_record(
@@ -201,7 +325,7 @@ def _insert_card_network_record(
     network_name: str,
     status: str,
     received_at: datetime,
-) -> None:
+) -> int:
     cursor.execute(
         """
         INSERT INTO card_network_records
@@ -210,6 +334,7 @@ def _insert_card_network_record(
         """,
         (network_name, transaction_id, status, received_at),
     )
+    return int(cursor.lastrowid)
 
 
 def _insert_bank_record(
@@ -219,7 +344,7 @@ def _insert_bank_record(
     status: str,
     received_at: datetime,
     amount: float,
-) -> None:
+) -> int:
     cursor.execute(
         """
         INSERT INTO bank_transaction_records
@@ -228,6 +353,7 @@ def _insert_bank_record(
         """,
         (transaction_id, bank_name, status, received_at, amount),
     )
+    return int(cursor.lastrowid)
 
 def _fetch_table_records(table_name):
     try:
@@ -243,21 +369,120 @@ def _fetch_table_records(table_name):
         connection.close()
 
 
-def insert_transaction(customer_id, business_id, amount, received_at):
+def insert_transaction(customer_id, business_id, amount, received_at) -> Dict[str, Any]:
+    """
+    Create a transaction and propagate it through all four pipeline stages
+    in a single database transaction (all-or-nothing).
+    """
+    connection = get_db_connection()
+    cursor = connection.cursor()
+    transaction_id: Optional[int] = None
+    stages: Dict[str, Dict[str, Any]] = {}
+
     try:
-        connection = get_db_connection()
-        cursor = connection.cursor()
+        tx_time = _coerce_datetime(received_at)
+        amount_value = float(amount)
 
-        query = """
-        INSERT INTO transactions (customer_id, business_id, amount, received_at)
-        VALUES (%s, %s, %s, %s)
-        """
+        try:
+            transaction_id = _insert_transaction(
+                cursor,
+                int(customer_id),
+                int(business_id),
+                amount_value,
+                tx_time,
+            )
+        except Exception as exc:
+            raise TransactionPipelineError(
+                "transaction_created",
+                f"Failed to create transaction: {exc}",
+            ) from exc
 
-        cursor.execute(query, (customer_id, business_id, amount, received_at))
+        stages["transaction_created"] = {
+            "status": "ok",
+            "transaction_id": transaction_id,
+            "customer_id": int(customer_id),
+            "business_id": int(business_id),
+            "amount": amount_value,
+            "received_at": tx_time.isoformat(sep=" "),
+        }
+        logger.info("Stage 1 complete: transaction_id=%s", transaction_id)
+
+        downstream_stages = _propagate_transaction_pipeline(
+            cursor,
+            transaction_id,
+            tx_time,
+            amount_value,
+            status="Success",
+        )
+        stages.update(downstream_stages)
+
         connection.commit()
+        logger.info(
+            "Transaction pipeline complete for transaction_id=%s", transaction_id
+        )
+        return {"transaction_id": transaction_id, "stages": stages}
+    except TransactionPipelineError:
+        connection.rollback()
+        logger.exception(
+            "Transaction pipeline failed at stage (transaction_id=%s)",
+            transaction_id,
+        )
+        raise
+    except Exception as exc:
+        connection.rollback()
+        logger.exception("Unexpected error during transaction pipeline")
+        raise TransactionPipelineError(
+            "transaction_created",
+            f"Unexpected pipeline error: {exc}",
+            transaction_id,
+        ) from exc
+    finally:
+        cursor.close()
+        connection.close()
 
-        return cursor.lastrowid
 
+def get_transaction_pipeline(transaction_id: int) -> Dict[str, Any]:
+    """Fetch a transaction and its downstream records for observability."""
+    connection = get_db_connection()
+    cursor = connection.cursor(dictionary=True)
+    try:
+        cursor.execute(
+            "SELECT * FROM transactions WHERE transaction_id = %s",
+            (transaction_id,),
+        )
+        transaction = cursor.fetchone()
+        if not transaction:
+            return {"found": False, "transaction_id": transaction_id}
+
+        cursor.execute(
+            "SELECT * FROM processor_records WHERE transaction_id = %s",
+            (transaction_id,),
+        )
+        processor_records = cursor.fetchall()
+
+        cursor.execute(
+            "SELECT * FROM card_network_records WHERE transaction_id = %s",
+            (transaction_id,),
+        )
+        card_network_records = cursor.fetchall()
+
+        cursor.execute(
+            "SELECT * FROM bank_transaction_records WHERE transaction_id = %s",
+            (transaction_id,),
+        )
+        bank_records = cursor.fetchall()
+
+        return {
+            "found": True,
+            "transaction_id": transaction_id,
+            "transaction": transaction,
+            "processor_records": processor_records,
+            "card_network_records": card_network_records,
+            "bank_transaction_records": bank_records,
+            "pipeline_complete": bool(
+                processor_records and card_network_records and bank_records
+            ),
+        }
     finally:
         cursor.close()
         connection.close()
