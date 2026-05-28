@@ -1,18 +1,57 @@
-from flask import Blueprint, jsonify, request, Response
+from flask import Blueprint, jsonify, request, Response, render_template
 from src.models.transaction_db import _fetch_table_records
 from src.controllers.simulate import run_simulation
 from src.controllers.reconcile import run_reconciliation_process
+from pathlib import Path
 
-api_bp = Blueprint('api', __name__)
+api_bp = Blueprint('api', __name__, static_folder = Path(__file__).parents[2] / "static")
 
-@api_bp.route("/")
+@api_bp.route("/index")
 def home():
-    return "<h1>Welcome to the lab</h1>"
+    return api_bp.send_static_file("index.html")
 
 @api_bp.route("/transactions")
+def transactions_route():
+    return api_bp.send_static_file("transactions.html")
+
+@api_bp.route("/reconciliation")
+def reconciliation_route():
+    return api_bp.send_static_file("reconciliation.html")
+
+"""@api_bp.route("/transactions")
 def test_transactions_fetch():
     table_dict = _fetch_table_records("transactions")
-    return jsonify(table_dict), 200
+    return jsonify(table_dict), 200"""
+
+@api_bp.route("/api/dashboard")
+def dashboard():
+
+    return jsonify({
+        "summary": {
+            "totalTransactions": 120,
+            "matches": 105,
+            "mismatches": 15,
+            "pending": 8
+        },
+        "results": [
+            {
+                "transactionId": 1,
+                "status": "Match",
+                "issue": "None"
+            },
+            {
+                "transactionId": 2,
+                "status": "AmountMismatch",
+                "issue": "Bank amount is different"
+            },
+            {
+                "transactionId": 3,
+                "status": "MissingDownstream",
+                "issue": "Missing bank record"
+            }
+        ]
+    })
+
 
 @api_bp.route("/processor_records")
 def test_processors_fetch():
