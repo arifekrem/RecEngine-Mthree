@@ -1,19 +1,68 @@
+from .db_pool import get_db_connection
+
+SHARED_RECON_CORE = """
+    transactions t
+    LEFT JOIN processor_records p ON t.transaction_id = p.transaction_id
+    LEFT JOIN card_network_records c ON t.transaction_id = c.transaction_id
+    LEFT JOIN bank_transaction_records b ON t.transaction_id = b.transaction_id
 """
 
+def _insert_into_reconciliation_runs(start_time, end_time):
+    try:
+        connection = get_db_connection()
+        cursor = connection.cursor()
+        query = f"""
+        INSERT INTO reconciliation_runs (start_time, end_time, records_checked, num_mismatches)
+        SELECT 
+            %s as start_time,
+            %s as end_time,
+            COUNT(*) as records_checked,
+            SUM(CASE 
+                WHEN (p.transaction_id IS NULL OR c.transaction_id IS NULL OR b.transaction_id IS NULL) OR
+                t.amount <> b.amount OR 
+                NOT (t.received_at <= p.received_at AND p.received_at <= c.received_at AND c.received_at <= b.received_at) OR
+                NOT (p.status = c.status AND c.status = b.status) 
+                THEN 1 ELSE 0
+            END) as num_mismatches
+        FROM {SHARED_RECON_CORE};
+        """
+        cursor.execute(query, (start_time, end_time))
+        connection.commit()
+        return int(cursor.lastrowid)
+    finally:
+        cursor.close()
+        connection.close()
 
-FUNCTION save_reconciliation_results(discrepancy_list, matched_list):
-    OPEN database connection
-    START atomic transaction
-    
-    FOR each item in discrepancy_list:
-        # e.g., INSERT INTO discrepancies (tx_id, error_type) VALUES ('TX123', 'Timestamp Sequence Violation')
-        RUN SQL: INSERT into 'discrepancies' table 
-        
-    FOR each id in matched_list:
-        # Final flag clearing the transaction records across your systems
-        RUN SQL: UPDATE 'transactions' SET status = 'RECONCILED' WHERE transaction_id = id
-        
-    COMMIT transaction
-    CLOSE connection
+def _insert_into_reconciliation_results(run_id):
+    try:
+        connection = get_db_connection()
+        cursor = connection.cursor()
+        query = f"""
+        INSERT INTO reconciliation_results (run_id, transaction_id, status)
+        SELECT 
+            %s as run_id,
+            t.transaction_id, 
+            (CASE 
+                WHEN p.transaction_id IS NULL OR c.transaction_id IS NULL OR b.transaction_id IS NULL
+                THEN "MissingDownstream" 
 
-"""
+                WHEN t.amount <> b.amount
+                THEN "AmountMismatch"
+
+                WHEN NOT (t.received_at <= p.received_at AND p.received_at <= c.received_at AND c.received_at <= b.received_at)
+                THEN "OrderMismatch"
+
+                WHEN NOT (p.status = c.status AND c.status = b.status)
+                THEN "StatusMismatch"
+
+                ELSE "Match"
+            END) as "status"
+
+            FROM {SHARED_RECON_CORE};  
+        """
+        cursor.execute(query, (run_id,))
+        connection.commit()
+        return int(cursor.lastrowid)
+    finally:
+        cursor.close()
+        connection.close()
