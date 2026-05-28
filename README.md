@@ -35,36 +35,32 @@ RECENGINE-MTHREE/
 ### Ec2 instance configuration, and how to run (docker later)
 
 ```
-# Update python to 3.13 and install pip
-sudo dnf update -y
-sudo dnf install python3.13 python3.13-pip python3.13-devel -y
-sudo dnf install python3-pip -y
-
-# Install flask and mysql-connector 
-pip3 install Flask
-pip3 install mysql-connector-python
-
-# mariadb is basically the same as mySql
+# install mariadb in container
 sudo dnf install -y mariadb105-server
 sudo systemctl start mariadb
 sudo systemctl enable mariadb
 sudo mysql -u root
 
-CREATE DATABASE reconciliation_db;
-CREATE USER 'rec_user'@'127.0.0.1' IDENTIFIED BY 'password';
-GRANT ALL PRIVILEGES ON reconciliation_db.* TO 'rec_user'@'127.0.0.1';
-FLUSH PRIVILEGES;
-EXIT;
+# install docker
+sudo dnf install -y docker
+sudo systemctl start docker
+sudo systemctl enable docker
+sudo usermod -aG docker $USER
+newgrp docker
 
-mysql -u rec_user -p -h 127.0.0.1 reconciliation_db < /path/to/schema.sql 
-password >> 'password'
+# install docker compose
+sudo curl -SL https://github.com/docker/compose/releases/latest/download/docker-compose-linux-$(uname -m) -o /usr/libexec/docker/cli-plugins/docker-compose
+sudo chmod +x /usr/libexec/docker/cli-plugins/docker-compose
+docker compose version
 
-python3 RecEngine-Mthree/app.py
+# buildx version for docker (if you dont do that = error)
+mkdir -p ~/.docker/cli-plugins
+BUILDX_VERSION=$(curl -s https://api.github.com/repos/docker/buildx/releases/latest | grep -oP '"tag_name": "\K[^"]+')
+curl -L https://github.com/docker/buildx/releases/download/${BUILDX_VERSION}/buildx-${BUILDX_VERSION}.linux-amd64   -o ~/.docker/cli-plugins/docker-buildx
+chmod +x ~/.docker/cli-plugins/docker-buildx
+docker buildx version
 
->>> * Running on all addresses (0.0.0.0)
->>> * Running on http://127.0.0.1:5000
->>> * Running on http://172.31.32.120:5000
-
-# see routes in RecEngine-Mthree/src/views/api_routes.py
+docker compose up -d --build && docker image prune -f
+docker compose down -v
 ```
 
