@@ -3,21 +3,33 @@
 ### Directory Structure
 
 ```
-└── src/
-    │
-    ├── views/                  # HTTP Routes / Js
-    │   ├── api_routes.py       # endpoints to the JavaScript frontend
-    │   └── static_routes.py    # Serves the index.html and static files
-    │
-    ├── controllers/            # Business Logic Coordination
-    │   ├── reconciliation.py   # reconciliation algorithm (calls methods from models/discrepancy.py). No Sql logic here
-    │   └── simulation.py       # generating good and bad transactions (calls methods from models/transaction_db.py). No Sql logic here
-    │
-    └── models/                 # MODEL LAYER: Database Interactions
-        ├── schema.sql          # MySQL schema
-        ├── db_pool.py          # MySQL Connector connection pool setup
-        ├── transaction_db.py   # SQL executions for reading/writing transactions
-        └── discrepancy_db.py   # SQL executions for recording mismatched entries
+RECENGINE-MTHREE/
+│
+├── src/
+│   ├── controllers/             # Business Logic Coordination
+│   │   ├── reconcile.py         # categorizes transactions across all tables (match/mismatch)
+│   │   └── simulate.py          # simulates good and bad transactions
+│   │
+│   ├── models/                  # MODEL LAYER: Database Interactions
+│   │   ├── db_pool.py           # MySQL Connector connection pool setup
+│   │   ├── discrepancy_db.py    # SQL executions for recording mismatched entries
+│   │   ├── schema.sql
+│   │   └── transaction_db.py    # SQL executions for reading/writing transactions
+│   │
+│   ├── views/                   # HTTP Routes / Js
+│   │   ├── api_routes.py
+│   │   ├── index.html
+│   │   ├── reconciliation.html
+│   │   ├── transactions.html
+│
+├── static/
+│   ├── js/
+│   ├── app.js
+│   ├── index.html
+│   └── style.css
+├── app.py                      # Entry point
+├── Project-Description.md
+├── requirements.txt
 ```
 
 ### Ec2 instance configuration, and how to run (docker later)
@@ -47,11 +59,12 @@ EXIT;
 mysql -u rec_user -p -h 127.0.0.1 reconciliation_db < /path/to/schema.sql 
 password >> 'password'
 
-cd python3 RecEngine-Mthree/app.py
+python3 RecEngine-Mthree/app.py
 
 >>> * Running on all addresses (0.0.0.0)
 >>> * Running on http://127.0.0.1:5000
 >>> * Running on http://172.31.32.120:5000
 
+# see routes in RecEngine-Mthree/src/views/api_routes.py
 ```
 
