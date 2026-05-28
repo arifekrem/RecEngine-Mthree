@@ -24,10 +24,10 @@ CREATE TABLE IF NOT EXISTS transactions(
 
 -- In real systems, this would store encrypted card info and format the transaction according to some protocol.
 CREATE TABLE IF NOT EXISTS processor_records(
-	processor_record_id INT PRIMARY KEY,
+	processor_record_id INT PRIMARY KEY AUTO_INCREMENT,
     transaction_id INT NOT NULL,
 	`status` ENUM('Pending', 'Success', 'Failed'),
-	received_at DATETIME,
+	received_at DATETIME NOT NULL,
     
     FOREIGN KEY(transaction_id) REFERENCES transactions(transaction_id) ON DELETE CASCADE,
     INDEX idx_processor_tx (transaction_id)
@@ -35,22 +35,22 @@ CREATE TABLE IF NOT EXISTS processor_records(
 
 -- (VISA, Mastercard, ...) receives request from processor and finds bank to route it to.
 CREATE TABLE IF NOT EXISTS card_network_records(
-	card_network_record_id INT PRIMARY KEY,
+	card_network_record_id INT PRIMARY KEY AUTO_INCREMENT,
     network_name VARCHAR(20),
     transaction_id INT NOT NULL,
 	`status` ENUM('Pending', 'Success', 'Failed'),
-	received_at DATETIME,
+	received_at DATETIME NOT NULL,
     FOREIGN KEY(transaction_id) REFERENCES transactions(transaction_id) ON DELETE CASCADE,
     INDEX idx_network_tx (transaction_id)
 );
 
 -- the bank that receives the funds
 CREATE TABLE IF NOT EXISTS bank_transaction_records(
-    bank_record_id INT PRIMARY KEY,
+    bank_record_id INT PRIMARY KEY AUTO_INCREMENT,
     transaction_id INT NOT NULL,
     bank_name VARCHAR(50),
     `status` ENUM('Pending', 'Success', 'Failed'),
-    received_at DATETIME,
+    received_at DATETIME NOT NULL,
     amount DECIMAL(18,4),
     FOREIGN KEY(transaction_id) REFERENCES transactions(transaction_id) ON DELETE CASCADE,
     INDEX idx_bank_tx (transaction_id)
@@ -72,7 +72,7 @@ CREATE TABLE IF NOT EXISTS reconciliation_runs(
 );
 
 CREATE TABLE IF NOT EXISTS reconciliation_results(
-	result_id INT PRIMARY KEY,
+	result_id INT PRIMARY KEY AUTO_INCREMENT,
     run_id INT, 
 	transaction_id INT NOT NULL,
     `status` ENUM(

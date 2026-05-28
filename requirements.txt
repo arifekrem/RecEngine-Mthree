@@ -1,1 +1,3 @@
-
+Flask
+mysql-connector-python
+gunicorn==22.0.0
