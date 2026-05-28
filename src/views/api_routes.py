@@ -23,35 +23,6 @@ def test_transactions_fetch():
     table_dict = _fetch_table_records("transactions")
     return jsonify(table_dict), 200"""
 
-@api_bp.route("/api/dashboard")
-def dashboard():
-
-    return jsonify({
-        "summary": {
-            "totalTransactions": 120,
-            "matches": 105,
-            "mismatches": 15,
-            "pending": 8
-        },
-        "results": [
-            {
-                "transactionId": 1,
-                "status": "Match",
-                "issue": "None"
-            },
-            {
-                "transactionId": 2,
-                "status": "AmountMismatch",
-                "issue": "Bank amount is different"
-            },
-            {
-                "transactionId": 3,
-                "status": "MissingDownstream",
-                "issue": "Missing bank record"
-            }
-        ]
-    })
-
 
 @api_bp.route("/processor_records")
 def test_processors_fetch():
