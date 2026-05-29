@@ -87,6 +87,31 @@ def record_reconciliation_run(records_checked: int, num_mismatches: int) -> None
     RECONCILIATION_RUNS.inc()
     RECONCILIATION_LAST_RECORDS_CHECKED.set(records_checked)
     RECONCILIATION_LAST_MISMATCHES.set(num_mismatches)
+    logger.info(
+        "Prometheus reconciliation gauges updated: records_checked=%s num_mismatches=%s",
+        records_checked,
+        num_mismatches,
+    )
+
+
+def _refresh_latest_reconciliation_run_gauges(cursor) -> None:
+    """Sync last-run gauges from the latest reconciliation_runs row (multi-worker safe)."""
+    cursor.execute(
+        """
+        SELECT records_checked, num_mismatches
+        FROM reconciliation_runs
+        ORDER BY id DESC
+        LIMIT 1
+        """
+    )
+    row = cursor.fetchone()
+    if not row:
+        RECONCILIATION_LAST_RECORDS_CHECKED.set(0)
+        RECONCILIATION_LAST_MISMATCHES.set(0)
+        return
+
+    RECONCILIATION_LAST_RECORDS_CHECKED.set(int(row[0] or 0))
+    RECONCILIATION_LAST_MISMATCHES.set(int(row[1] or 0))
 
 
 def refresh_db_gauges() -> None:
@@ -114,6 +139,8 @@ def refresh_db_gauges() -> None:
         )
         for status, count in cursor.fetchall():
             RECONCILIATION_RESULTS_BY_STATUS.labels(status=status).set(count)
+
+        _refresh_latest_reconciliation_run_gauges(cursor)
     except Exception:
         logger.exception("Failed to refresh DB gauges for Prometheus")
         raise

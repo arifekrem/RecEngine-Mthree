@@ -1,5 +1,3 @@
-from src.observability.metrics import record_reconciliation_run
-
 from .db_pool import get_db_connection
 
 SHARED_RECON_CORE = """
