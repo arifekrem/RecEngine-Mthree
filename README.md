@@ -17,16 +17,10 @@ RECENGINE-MTHREE/
 │   │   └── transaction_db.py    # SQL executions for reading/writing transactions
 │   │
 │   ├── views/                   # HTTP Routes / Js
-│   │   └── api_routes.py
-│   │
-│   └── observability/           # Prometheus metrics for transaction monitoring
-│       └── metrics.py
-│
-├── prometheus/
-│   └── prometheus.yml           # Scrape config (targets flask:5000/metrics)
-├── grafana/
-│   ├── provisioning/            # Auto-configured Prometheus datasource
-│   └── dashboards/              # RecEngine Transactions dashboard
+│   │   ├── api_routes.py
+│   │   ├── index.html
+│   │   ├── reconciliation.html
+│   │   ├── transactions.html
 │
 ├── static/
 │   ├── js/
@@ -85,29 +79,6 @@ Access:
 
 * [http://your-public-ip/index](http://your-public-ip/index) (requires EC2 inbound rule on port 80)
 * or locally: `curl http://localhost/index`
-
-### Observability (Prometheus + Grafana)
-
-Prometheus and Grafana run in the same Docker Compose stack and monitor transaction activity via Flask `/metrics`.
-
-| Service | URL | Notes |
-|---------|-----|-------|
-| Grafana | [http://localhost:3000](http://localhost:3000) | login `admin` / `admin` |
-| Prometheus | [http://localhost:9090](http://localhost:9090) | scrapes `flask:5000/metrics` every 15s |
-| Metrics | `http://flask:5000/metrics` (internal) | counters + DB gauges |
-
-Open Grafana → **Dashboards → RecEngine → RecEngine Transactions** after generating data (simulation, manual transactions, or reconciliation runs).
-
-Metrics exposed:
-
-* `recengine_transactions_created_total` / `_deleted_total`
-* `recengine_transactions_in_database` (live row count)
-* `recengine_pipeline_failures_total` by stage
-* `recengine_simulation_transactions_total` (good vs chaos)
-* `recengine_reconciliation_results_by_status`
-* `recengine_reconciliation_last_mismatches` / `_last_records_checked`
-
-On EC2, open inbound rules for ports **3000** (Grafana) and **9090** (Prometheus) if you need external access.
 
 ### Logs (HTTP requests + application / DB errors)
 
