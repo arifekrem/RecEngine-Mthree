@@ -5,8 +5,6 @@ from typing import Dict
 
 from prometheus_client import Counter, Gauge
 
-from src.models.db_pool import get_db_connection
-
 logger = logging.getLogger(__name__)
 
 TRANSACTIONS_CREATED = Counter(
@@ -93,6 +91,8 @@ def record_reconciliation_run(records_checked: int, num_mismatches: int) -> None
 
 def refresh_db_gauges() -> None:
     """Refresh gauges from MySQL so Prometheus scrapes current table state."""
+    from src.models.db_pool import get_db_connection
+
     connection = get_db_connection()
     cursor = connection.cursor()
     try:
