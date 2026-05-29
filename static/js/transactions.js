@@ -113,8 +113,8 @@ form.addEventListener("submit", async function(event) {
 
         const data = await response.json();
         if (!response.ok) {
-            const stage = data.failed_stage ? ` (failed at: ${data.failed_stage})` : "";
-            alert(`${data.message || data.error}${stage}`);
+            const stage = data.failed_stage ? `\nStage: ${data.failed_stage}` : "";
+            alert(`${data.error || data.message}${stage}`);
         } else {
             const stageSummary = data.stages
                 ? Object.keys(data.stages).join(" → ")

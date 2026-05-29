@@ -5,6 +5,13 @@ import random
 from datetime import datetime, timedelta
 from typing import Any, Dict, Optional, Union
 
+from src.observability.metrics import (
+    record_pipeline_failure,
+    record_simulation_batch,
+    record_transaction_created,
+    record_transaction_deleted,
+)
+
 from .db_pool import get_db_connection
 
 logger = logging.getLogger(__name__)
@@ -109,6 +116,7 @@ def generate_simulation_batch(
                 counters["order_mismatch"] += 1
 
         connection.commit()
+        record_simulation_batch(counters)
         return counters
     except Exception:
         connection.rollback()
@@ -415,12 +423,14 @@ def insert_transaction(customer_id, business_id, amount, received_at) -> Dict[st
         stages.update(downstream_stages)
 
         connection.commit()
+        record_transaction_created()
         logger.info(
             "Transaction pipeline complete for transaction_id=%s", transaction_id
         )
         return {"transaction_id": transaction_id, "stages": stages}
-    except TransactionPipelineError:
+    except TransactionPipelineError as exc:
         connection.rollback()
+        record_pipeline_failure(exc.stage)
         logger.exception(
             "Transaction pipeline failed at stage (transaction_id=%s)",
             transaction_id,
@@ -497,12 +507,14 @@ def delete_transaction(transaction_id):
         )
 
         connection.commit()
-
-        return cursor.rowcount
+        rows_deleted = cursor.rowcount
+        if rows_deleted:
+            record_transaction_deleted()
+        return rows_deleted
 
     finally:
         cursor.close()
-        connection.close()    
+        connection.close()
 
 def update_transaction(transaction_id, customer_id, business_id, amount, received_at):
     try:

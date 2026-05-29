@@ -28,7 +28,21 @@ def _insert_into_reconciliation_runs(start_time, end_time):
         """
         cursor.execute(query, (start_time, end_time))
         connection.commit()
-        return int(cursor.lastrowid)
+        run_id = int(cursor.lastrowid)
+        cursor.execute(
+            """
+            SELECT records_checked, num_mismatches
+            FROM reconciliation_runs
+            WHERE id = %s
+            """,
+            (run_id,),
+        )
+        row = cursor.fetchone()
+        return {
+            "run_id": run_id,
+            "records_checked": int(row[0] or 0),
+            "num_mismatches": int(row[1] or 0),
+        }
     finally:
         cursor.close()
         connection.close()
