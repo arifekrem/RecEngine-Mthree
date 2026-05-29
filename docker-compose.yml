@@ -3,7 +3,7 @@ services: # Different containers to compose
     image: nginx:alpine # docker hub image
     container_name: nginx # container name so its not random
     volumes:
-      - ./nginx.conf:/etc/nginx/conf.d/default.conf # mount the nginx.conf in terminal into the containers default.conf (which is what the container would use internally for nginx)
+      - ./docker/nginx.conf:/etc/nginx/conf.d/default.conf # mount the nginx.conf in terminal into the containers default.conf (which is what the container would use internally for nginx)
                                                     # Editing nginx.conf locally would change what the container uses.
     ports:
       - "80:80" # punches a hole between ec2 instance and container at port 80. http request -> ec2:80 /hole/ -> container:nginx -> ...
