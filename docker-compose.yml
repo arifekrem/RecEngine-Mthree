@@ -15,10 +15,10 @@ services: # Different containers to compose
   db:
     image: mariadb:11
     environment: # Below are somehow variables that areused to init database
-      MARIADB_ROOT_PASSWORD: xkir23
+      MARIADB_ROOT_PASSWORD: admin
       MARIADB_DATABASE: reconciliation_db
-      MARIADB_USER: rec_user
-      MARIADB_PASSWORD: xkir23
+      MARIADB_USER: admin
+      MARIADB_PASSWORD: admin
     networks: # Add this db service to the internal shared docker network for this compose ecosystem
       - my-network
     volumes:
@@ -30,14 +30,14 @@ services: # Different containers to compose
 
   flask:
     build: # build an image from scratch instead of using pre buitl image
-      context: ./
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: docker/Dockerfile
     container_name: flask
     environment:
       DB_HOST: db
       DB_PORT: 3306
-      DB_USER: rec_user
-      DB_PASSWORD: xkir23
+      DB_USER: admin
+      DB_PASSWORD: admin
       DB_NAME: reconciliation_db
       PYTHONUNBUFFERED: "1"
 
