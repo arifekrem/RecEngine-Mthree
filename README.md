@@ -78,7 +78,11 @@ tail -f -n 10 /var/log/user-data.log
 
 ```
 
-Once finalized, the application will be accessible at: `http://<public-ip>/index`
+Once finalized, the application will be accessible at: `http://<public-ip>/index` <br>
+#### 5. Destroying terraform
+```bash
+terraform destroy
+```
 
 ---
 
