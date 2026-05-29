@@ -77,6 +77,7 @@ CREATE TABLE IF NOT EXISTS reconciliation_results(
 	transaction_id INT NOT NULL,
     `status` ENUM(
 		'Match',
+        'Pending', -- in-flight pipeline; downstream incomplete or marked Pending
 		'MissingDownstream', -- transaction exists but didn't make it to the other tables
 		'AmountMismatch',
 		'StatusMismatch', -- ex: processor = Success, but card_network = Failed

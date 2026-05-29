@@ -12,6 +12,10 @@ logger = logging.getLogger(__name__)
 
 
 def run_reconciliation_process():
+    """
+    Audit run: classifies each transaction (Match, Pending, or mismatch types).
+    Pending covers in-flight pipelines with incomplete downstream or Pending status.
+    """
     start_time = datetime.utcnow() - timedelta(minutes=6)
     end_time = datetime.utcnow()
 

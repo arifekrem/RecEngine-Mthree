@@ -148,6 +148,10 @@ tr:hover {
     background-color: #16a34a;
 }
 
+.pending {
+    background-color: #f59e0b;
+}
+
 .amount {
     background-color: #dc2626;
 }
@@ -158,6 +162,14 @@ tr:hover {
 
 .failed {
     background-color: #7c3aed;
+}
+
+.pipeline-stage {
+    display: block;
+    margin-top: 4px;
+    font-size: 12px;
+    color: #6b7280;
+    font-weight: normal;
 }
 
 .form-section {

@@ -24,6 +24,8 @@ function renderTransactions() {
 
     filteredTransactions.forEach(transaction => {
         const row = document.createElement("tr");
+        const pipelineLabel = transaction.pipeline_status || "Unknown";
+        const pipelineClass = getPipelineStatusClass(pipelineLabel);
 
         row.innerHTML = `
             <td>${transaction.transaction_id}</td>
@@ -31,6 +33,10 @@ function renderTransactions() {
             <td>${transaction.business_id}</td>
             <td>$${transaction.amount}</td>
             <td>${transaction.received_at}</td>
+            <td>
+                <span class="status ${pipelineClass}">${pipelineLabel}</span>
+                <span class="pipeline-stage">Stage ${transaction.pipeline_stage || "?"}</span>
+            </td>
             <td>
                 <button class="edit-btn" onclick="editTransaction(${transaction.transaction_id})">
                     Edit
@@ -74,6 +80,13 @@ async function deleteTransaction(id) {
     });
 
     loadTransactions();
+}
+
+function getPipelineStatusClass(status) {
+    if (status === "Complete") return "match";
+    if (status === "Pending") return "pending";
+    if (status === "Incomplete") return "missing";
+    return "failed";
 }
 
 searchInput.addEventListener("input", renderTransactions);

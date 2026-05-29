@@ -1,13 +1,20 @@
 let transactionChart;
 
+const MISMATCH_STATUSES = new Set([
+    "MissingDownstream",
+    "AmountMismatch",
+    "StatusMismatch",
+    "OrderMismatch",
+]);
+
 async function loadDashboard() {
     const response = await fetch("/api/reconciliation_results");
     const results = await response.json();
 
     const totalTransactions = results.length;
     const matches = results.filter(r => r.status === "Match").length;
-    const mismatches = results.filter(r => r.status !== "Match").length;
-    const pending = 0;
+    const pending = results.filter(r => r.status === "Pending").length;
+    const mismatches = results.filter(r => MISMATCH_STATUSES.has(r.status)).length;
 
     document.getElementById("totalTransactions").innerText = totalTransactions;
     document.getElementById("matches").innerText = matches;
@@ -61,6 +68,7 @@ function updateChart(matches, mismatches, pending) {
 
 function getStatusClass(status) {
     if (status === "Match") return "match";
+    if (status === "Pending") return "pending";
     if (status === "AmountMismatch") return "amount";
     if (status === "MissingDownstream") return "missing";
     return "failed";
@@ -68,6 +76,9 @@ function getStatusClass(status) {
 
 function getDescription(status) {
     if (status === "Match") return "Transaction matched across all systems";
+    if (status === "Pending") {
+        return "Transaction is in-flight; downstream pipeline not complete";
+    }
     if (status === "AmountMismatch") return "Bank amount does not match original transaction";
     if (status === "MissingDownstream") return "Transaction is missing from one downstream table";
     if (status === "StatusMismatch") return "Processor, card network, and bank statuses do not match";

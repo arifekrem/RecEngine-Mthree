@@ -1,5 +1,12 @@
 let reconciliationResults = [];
 
+const MISMATCH_STATUSES = new Set([
+    "MissingDownstream",
+    "AmountMismatch",
+    "StatusMismatch",
+    "OrderMismatch",
+]);
+
 const runBtn = document.getElementById("runBtn");
 const table = document.getElementById("reconciliationTable");
 const emptyMessage = document.getElementById("emptyMessage");
@@ -22,7 +29,7 @@ function displayResults(results) {
 
     if (!results || results.length === 0) {
         emptyMessage.innerText =
-            "No mismatches found. All systems reconciled successfully.";
+            "No reconciliation results yet. Run reconciliation after loading transactions.";
         return;
     }
 
@@ -51,7 +58,7 @@ function filterResults(type) {
 
     if (type === "Mismatch") {
         displayResults(
-            reconciliationResults.filter(result => result.status !== "Match")
+            reconciliationResults.filter(result => MISMATCH_STATUSES.has(result.status))
         );
         return;
     }
@@ -67,6 +74,7 @@ function applyDateFilter() {
 
 function getStatusClass(status) {
     if (status === "Match") return "match";
+    if (status === "Pending") return "pending";
     if (status === "AmountMismatch") return "amount";
     if (status === "MissingDownstream") return "missing";
     return "failed";
@@ -74,6 +82,9 @@ function getStatusClass(status) {
 
 function getDescription(status) {
     if (status === "Match") return "Transaction matched across all systems";
+    if (status === "Pending") {
+        return "Transaction is in-flight; waiting on downstream pipeline stages";
+    }
     if (status === "AmountMismatch") return "Bank amount does not match original transaction";
     if (status === "MissingDownstream") return "Transaction is missing from one downstream table";
     if (status === "StatusMismatch") return "Processor, card network, and bank statuses do not match";
