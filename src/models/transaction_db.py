@@ -367,20 +367,6 @@ def _insert_bank_record(
     )
     return int(cursor.lastrowid)
 
-def _fetch_table_records(table_name):
-    try:
-        connection = get_db_connection()
-        cursor = connection.cursor(dictionary = True)
-        
-        # No sql injections because table name is whitelisted, and col_str is not accessible by users.
-        cursor.execute(f"SELECT * FROM {table_name}") 
-        table_data = cursor.fetchall() # a dictionary
-        return table_data
-    finally:
-        cursor.close()
-        connection.close()
-
-
 def insert_transaction(customer_id, business_id, amount, received_at) -> Dict[str, Any]:
     """
     Create a transaction and propagate it through all four pipeline stages
