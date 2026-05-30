@@ -1,4 +1,4 @@
-from .db_pool import get_db_connection
+from .db_pool import close_db_resources, get_db_connection
 
 SHARED_RECON_CORE = """
     transactions t
@@ -9,6 +9,8 @@ SHARED_RECON_CORE = """
 
 
 def _insert_into_reconciliation_runs(start_time, end_time):
+    connection = None
+    cursor = None
     try:
         connection = get_db_connection()
         cursor = connection.cursor()
@@ -45,11 +47,12 @@ def _insert_into_reconciliation_runs(start_time, end_time):
             "num_mismatches": int(row[1] or 0),
         }
     finally:
-        cursor.close()
-        connection.close()
+        close_db_resources(connection, cursor)
 
 
 def _insert_into_reconciliation_results(run_id):
+    connection = None
+    cursor = None
     try:
         connection = get_db_connection()
         cursor = connection.cursor()
@@ -83,5 +86,4 @@ def _insert_into_reconciliation_results(run_id):
         connection.commit()
         return int(cursor.lastrowid)
     finally:
-        cursor.close()
-        connection.close()
+        close_db_resources(connection, cursor)

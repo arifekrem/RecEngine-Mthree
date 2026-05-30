@@ -13,7 +13,7 @@ from src.observability.metrics import (
     record_transaction_deleted,
 )
 
-from .db_pool import get_db_connection
+from .db_pool import close_db_resources, get_db_connection
 
 logger = logging.getLogger(__name__)
 
@@ -62,10 +62,14 @@ def generate_simulation_batch(
         raise ValueError("chaos_ratio must be between 0 and 1")
 
     rng = random.Random(seed)
-    connection = get_db_connection()
-    cursor = connection.cursor()
+    connection = None
+    cursor = None
 
-    counters = {
+    try:
+        connection = get_db_connection()
+        cursor = connection.cursor()
+
+        counters = {
         "total": total_records,
         "good": 0,
         "chaos": 0,
@@ -73,11 +77,10 @@ def generate_simulation_batch(
         "amount_mismatch": 0,
         "status_mismatch": 0,
         "order_mismatch": 0,
-    }
+        }
 
-    base_time = datetime.utcnow() - timedelta(minutes=5)
+        base_time = datetime.utcnow() - timedelta(minutes=5)
 
-    try:
         for idx in range(total_records):
             tx_time = base_time + timedelta(seconds=idx * 2)
             amount = round(rng.uniform(5.00, 3000.00), 4)
@@ -117,11 +120,11 @@ def generate_simulation_batch(
         record_simulation_batch(counters)
         return counters
     except Exception:
-        connection.rollback()
+        if connection is not None:
+            connection.rollback()
         raise
     finally:
-        cursor.close()
-        connection.close()
+        close_db_resources(connection, cursor)
         
 def _json_safe_row(row: Dict[str, Any]) -> Dict[str, Any]:
     safe: Dict[str, Any] = {}
@@ -136,17 +139,18 @@ def _json_safe_row(row: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def fetch_table_records(table_name):
+    connection = None
+    cursor = None
     try:
         connection = get_db_connection()
-        cursor = connection.cursor(dictionary = True)
-        
+        cursor = connection.cursor(dictionary=True)
+
         # No sql injections because table name is whitelisted, and col_str is not accessible by users.
-        cursor.execute(f"SELECT * FROM {table_name}") 
+        cursor.execute(f"SELECT * FROM {table_name}")
         table_data = cursor.fetchall()
         return [_json_safe_row(row) for row in table_data]
     finally:
-        cursor.close()
-        connection.close()
+        close_db_resources(connection, cursor)
 
 
 def _insert_transaction(cursor, customer_id: int, business_id: int, amount: float, received_at: datetime) -> int:
@@ -389,12 +393,15 @@ def insert_transaction(customer_id, business_id, amount, received_at) -> Dict[st
     Create a transaction and propagate it through all four pipeline stages
     in a single database transaction (all-or-nothing).
     """
-    connection = get_db_connection()
-    cursor = connection.cursor()
+    connection = None
+    cursor = None
     transaction_id: Optional[int] = None
     stages: Dict[str, Dict[str, Any]] = {}
 
     try:
+        connection = get_db_connection()
+        cursor = connection.cursor()
+
         tx_time = _coerce_datetime(received_at)
         amount_value = float(amount)
 
@@ -438,7 +445,8 @@ def insert_transaction(customer_id, business_id, amount, received_at) -> Dict[st
         )
         return {"transaction_id": transaction_id, "stages": stages}
     except TransactionPipelineError as exc:
-        connection.rollback()
+        if connection is not None:
+            connection.rollback()
         record_pipeline_failure(exc.stage)
         logger.exception(
             "Transaction pipeline failed at stage (transaction_id=%s)",
@@ -446,7 +454,8 @@ def insert_transaction(customer_id, business_id, amount, received_at) -> Dict[st
         )
         raise
     except Exception as exc:
-        connection.rollback()
+        if connection is not None:
+            connection.rollback()
         logger.exception("Unexpected error during transaction pipeline")
         raise TransactionPipelineError(
             "transaction_created",
@@ -454,15 +463,16 @@ def insert_transaction(customer_id, business_id, amount, received_at) -> Dict[st
             transaction_id,
         ) from exc
     finally:
-        cursor.close()
-        connection.close()
+        close_db_resources(connection, cursor)
 
 
 def get_transaction_pipeline(transaction_id: int) -> Dict[str, Any]:
     """Fetch a transaction and its downstream records for observability."""
-    connection = get_db_connection()
-    cursor = connection.cursor(dictionary=True)
+    connection = None
+    cursor = None
     try:
+        connection = get_db_connection()
+        cursor = connection.cursor(dictionary=True)
         cursor.execute(
             "SELECT * FROM transactions WHERE transaction_id = %s",
             (transaction_id,),
@@ -501,11 +511,12 @@ def get_transaction_pipeline(transaction_id: int) -> Dict[str, Any]:
             ),
         }
     finally:
-        cursor.close()
-        connection.close()
+        close_db_resources(connection, cursor)
 
 
 def delete_transaction(transaction_id):
+    connection = None
+    cursor = None
     try:
         connection = get_db_connection()
         cursor = connection.cursor()
@@ -520,12 +531,13 @@ def delete_transaction(transaction_id):
         if rows_deleted:
             record_transaction_deleted()
         return rows_deleted
-
     finally:
-        cursor.close()
-        connection.close()
+        close_db_resources(connection, cursor)
+
 
 def update_transaction(transaction_id, customer_id, business_id, amount, received_at):
+    connection = None
+    cursor = None
     try:
         connection = get_db_connection()
         cursor = connection.cursor()
@@ -545,7 +557,5 @@ def update_transaction(transaction_id, customer_id, business_id, amount, receive
         connection.commit()
 
         return cursor.rowcount
-
     finally:
-        cursor.close()
-        connection.close()
+        close_db_resources(connection, cursor)

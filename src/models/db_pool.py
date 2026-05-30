@@ -25,3 +25,11 @@ def get_db_connection():
         )
 
     return conn_pool.get_connection()
+
+
+def close_db_resources(connection=None, cursor=None):
+    """Safely close cursor/connection when setup may have failed mid-try."""
+    if cursor is not None:
+        cursor.close()
+    if connection is not None:
+        connection.close()
