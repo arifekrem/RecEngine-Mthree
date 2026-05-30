@@ -76,7 +76,7 @@ services: # Different containers to compose
       # defines the public url that users will use to access grafana
       # %(protocol)s becomes http dynamically
       # %(domain)s becomes either ip or domain name (like google.com)
-      GF_SERVER_ROOT_URL: "%(protocol)s://%(domain)s/grafana/"
+      GF_SERVER_ROOT_URL: "http://%(domain)s/grafana/"
 
       GF_SERVER_SERVE_FROM_SUB_PATH: "true"
     volumes:

@@ -1,4 +1,4 @@
-from flask import Blueprint, jsonify, request, redirect, url_for
+from flask import Blueprint, jsonify, request, redirect
 from src.models.transaction_db import (
     TransactionPipelineError,
     fetch_table_records,
@@ -16,7 +16,7 @@ api_bp = Blueprint('api', __name__, static_folder = Path(__file__).parents[2] / 
 # Index page
 @api_bp.route("/")
 def root():
-    return redirect(url_for("index"))
+    return redirect("/index")
 
 @api_bp.route("/index")
 def home():
