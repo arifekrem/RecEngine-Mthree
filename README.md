@@ -61,6 +61,7 @@ aws configure
 #### 3. Deploy the Infrastructure
 
 ```bash
+ cd terraform 
  terraform init
  terraform apply
 
