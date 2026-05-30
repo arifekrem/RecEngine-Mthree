@@ -1,6 +1,5 @@
-
-DROP DATABASE IF EXISTS reconciliation_db;
-CREATE DATABASE IF NOT EXISTS reconciliation_db;
+-- MariaDB Docker entrypoint already creates reconciliation_db and grants rec_user.
+-- Do not DROP/CREATE the database here; that breaks user grants on first init.
 
 USE reconciliation_db;
 
