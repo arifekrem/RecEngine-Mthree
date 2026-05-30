@@ -7,35 +7,6 @@ SHARED_RECON_CORE = """
     LEFT JOIN bank_transaction_records b ON t.transaction_id = b.transaction_id
 """
 
-# Evaluated before MissingDownstream so in-flight rows are not counted as hard failures.
-PENDING_RECON_SQL = """
-    (
-        p.status = 'Pending' OR c.status = 'Pending' OR b.status = 'Pending'
-    )
-    OR (
-        (p.transaction_id IS NULL OR c.transaction_id IS NULL OR b.transaction_id IS NULL)
-        AND (
-            IFNULL(p.status, '') = 'Pending'
-            OR IFNULL(c.status, '') = 'Pending'
-            OR IFNULL(b.status, '') = 'Pending'
-        )
-    )
-"""
-
-MISMATCH_RECON_SQL = f"""
-    NOT ({PENDING_RECON_SQL})
-    AND (
-        (p.transaction_id IS NULL OR c.transaction_id IS NULL OR b.transaction_id IS NULL)
-        OR t.amount <> b.amount
-        OR NOT (
-            t.received_at <= p.received_at
-            AND p.received_at <= c.received_at
-            AND c.received_at <= b.received_at
-        )
-        OR NOT (p.status = c.status AND c.status = b.status)
-    )
-"""
-
 
 def _insert_into_reconciliation_runs(start_time, end_time):
     try:
@@ -48,8 +19,11 @@ def _insert_into_reconciliation_runs(start_time, end_time):
             %s AS end_time,
             COUNT(*) AS records_checked,
             SUM(CASE
-                WHEN {MISMATCH_RECON_SQL} THEN 1
-                ELSE 0
+                WHEN (p.transaction_id IS NULL OR c.transaction_id IS NULL OR b.transaction_id IS NULL) OR
+                t.amount <> b.amount OR
+                NOT (t.received_at <= p.received_at AND p.received_at <= c.received_at AND c.received_at <= b.received_at) OR
+                NOT (p.status = c.status AND c.status = b.status)
+                THEN 1 ELSE 0
             END) AS num_mismatches
         FROM {SHARED_RECON_CORE};
         """
@@ -85,12 +59,7 @@ def _insert_into_reconciliation_results(run_id):
             %s AS run_id,
             t.transaction_id,
             (CASE
-                WHEN {PENDING_RECON_SQL}
-                THEN 'Pending'
-
-                WHEN p.transaction_id IS NULL
-                    OR c.transaction_id IS NULL
-                    OR b.transaction_id IS NULL
+                WHEN p.transaction_id IS NULL OR c.transaction_id IS NULL OR b.transaction_id IS NULL
                 THEN 'MissingDownstream'
 
                 WHEN t.amount <> b.amount

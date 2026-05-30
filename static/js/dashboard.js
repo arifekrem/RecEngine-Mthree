@@ -1,25 +1,16 @@
 let transactionChart;
 
-const MISMATCH_STATUSES = new Set([
-    "MissingDownstream",
-    "AmountMismatch",
-    "StatusMismatch",
-    "OrderMismatch",
-]);
-
 async function loadDashboard() {
     const response = await fetch("/api/reconciliation_results");
     const results = await response.json();
 
     const totalTransactions = results.length;
     const matches = results.filter(r => r.status === "Match").length;
-    const pending = results.filter(r => r.status === "Pending").length;
-    const mismatches = results.filter(r => MISMATCH_STATUSES.has(r.status)).length;
+    const mismatches = results.filter(r => r.status !== "Match").length;
 
     document.getElementById("totalTransactions").innerText = totalTransactions;
     document.getElementById("matches").innerText = matches;
     document.getElementById("mismatches").innerText = mismatches;
-    document.getElementById("pending").innerText = pending;
 
     const tableBody = document.getElementById("resultsTable");
     tableBody.innerHTML = "";
@@ -40,10 +31,10 @@ async function loadDashboard() {
         tableBody.appendChild(row);
     });
 
-    updateChart(matches, mismatches, pending);
+    updateChart(matches, mismatches);
 }
 
-function updateChart(matches, mismatches, pending) {
+function updateChart(matches, mismatches) {
     const ctx = document.getElementById("transactionChart");
 
     if (transactionChart) {
@@ -53,10 +44,10 @@ function updateChart(matches, mismatches, pending) {
     transactionChart = new Chart(ctx, {
         type: "doughnut",
         data: {
-            labels: ["Matches", "Mismatches", "Pending"],
+            labels: ["Matches", "Mismatches"],
             datasets: [{
-                data: [matches, mismatches, pending],
-                backgroundColor: ["#16a34a", "#dc2626", "#f59e0b"]
+                data: [matches, mismatches],
+                backgroundColor: ["#16a34a", "#dc2626"]
             }]
         },
         options: {
@@ -68,7 +59,6 @@ function updateChart(matches, mismatches, pending) {
 
 function getStatusClass(status) {
     if (status === "Match") return "match";
-    if (status === "Pending") return "pending";
     if (status === "AmountMismatch") return "amount";
     if (status === "MissingDownstream") return "missing";
     return "failed";
@@ -76,9 +66,6 @@ function getStatusClass(status) {
 
 function getDescription(status) {
     if (status === "Match") return "Transaction matched across all systems";
-    if (status === "Pending") {
-        return "Transaction is in-flight; downstream pipeline not complete";
-    }
     if (status === "AmountMismatch") return "Bank amount does not match original transaction";
     if (status === "MissingDownstream") return "Transaction is missing from one downstream table";
     if (status === "StatusMismatch") return "Processor, card network, and bank statuses do not match";

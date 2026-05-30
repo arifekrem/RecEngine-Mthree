@@ -58,22 +58,10 @@ RECONCILIATION_RESULTS_BY_STATUS = Gauge(
 
 _RECON_STATUSES = (
     "Match",
-    "Pending",
     "MissingDownstream",
     "AmountMismatch",
     "StatusMismatch",
     "OrderMismatch",
-)
-
-PIPELINE_PENDING_STOPS = Counter(
-    "recengine_pipeline_pending_stops_total",
-    "In-flight pipelines stopped at a stage for pending simulation.",
-    ["stop_after"],
-)
-
-PENDING_DOWNSTREAM_RECORDS = Gauge(
-    "recengine_pending_downstream_records",
-    "Downstream rows currently marked with status Pending.",
 )
 
 
@@ -89,15 +77,10 @@ def record_pipeline_failure(stage: str) -> None:
     PIPELINE_FAILURES.labels(stage=stage or "unknown").inc()
 
 
-def record_pending_pipeline(stop_after: str) -> None:
-    PIPELINE_PENDING_STOPS.labels(stop_after=stop_after or "unknown").inc()
-
-
 def record_simulation_batch(counters: Dict[str, int]) -> None:
     SIMULATION_BATCHES.inc()
     SIMULATION_TRANSACTIONS.labels(kind="good").inc(counters.get("good", 0))
     SIMULATION_TRANSACTIONS.labels(kind="chaos").inc(counters.get("chaos", 0))
-    SIMULATION_TRANSACTIONS.labels(kind="pending").inc(counters.get("pending", 0))
 
 
 def record_reconciliation_run(records_checked: int, num_mismatches: int) -> None:
@@ -143,20 +126,6 @@ def refresh_db_gauges() -> None:
 
         cursor.execute("SELECT COUNT(*) FROM processor_records")
         PROCESSOR_RECORDS_IN_DB.set(cursor.fetchone()[0])
-
-        cursor.execute(
-            "SELECT COUNT(*) FROM processor_records WHERE status = 'Pending'"
-        )
-        pending_count = int(cursor.fetchone()[0])
-        cursor.execute(
-            "SELECT COUNT(*) FROM card_network_records WHERE status = 'Pending'"
-        )
-        pending_count += int(cursor.fetchone()[0])
-        cursor.execute(
-            "SELECT COUNT(*) FROM bank_transaction_records WHERE status = 'Pending'"
-        )
-        pending_count += int(cursor.fetchone()[0])
-        PENDING_DOWNSTREAM_RECORDS.set(pending_count)
 
         for status in _RECON_STATUSES:
             RECONCILIATION_RESULTS_BY_STATUS.labels(status=status).set(0)

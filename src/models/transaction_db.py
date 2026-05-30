@@ -6,7 +6,6 @@ from datetime import datetime, timedelta
 from typing import Any, Dict, Optional, Union
 
 from src.observability.metrics import (
-    record_pending_pipeline,
     record_pipeline_failure,
     record_simulation_batch,
     record_transaction_created,
@@ -41,10 +40,6 @@ ALLOWED_TABLES = {
 
 NETWORK_NAMES = ("Visa", "Mastercard", "SWIFT")
 BANK_NAMES = ("Citi", "Chase", "Bank of America", "Wells Fargo")
-PENDING_GOOD_RATE = 0.2
-PENDING_STOP_STAGES = ("processor", "network")
-
-
 def generate_simulation_batch(
     total_records: int = 100,
     chaos_ratio: float = 0.15,
@@ -72,7 +67,6 @@ def generate_simulation_batch(
     counters = {
         "total": total_records,
         "good": 0,
-        "pending": 0,
         "chaos": 0,
         "missing_downstream": 0,
         "amount_mismatch": 0,
@@ -99,12 +93,8 @@ def generate_simulation_batch(
 
             is_chaos = rng.random() < chaos_ratio
             if not is_chaos:
-                if rng.random() < PENDING_GOOD_RATE:
-                    _insert_pending_path(cursor, transaction_id, tx_time, amount, rng)
-                    counters["pending"] += 1
-                else:
-                    _insert_happy_path(cursor, transaction_id, tx_time, amount, rng)
-                    counters["good"] += 1
+                _insert_happy_path(cursor, transaction_id, tx_time, amount, rng)
+                counters["good"] += 1
                 continue
 
             anomaly = rng.choice(
@@ -146,52 +136,6 @@ def fetch_table_records(table_name):
         connection.close()
 
 
-def fetch_transactions_with_pipeline_status():
-    """Transactions joined with derived in-flight / pending pipeline state."""
-    try:
-        connection = get_db_connection()
-        cursor = connection.cursor(dictionary=True)
-        cursor.execute(
-            """
-            SELECT
-                t.transaction_id,
-                t.customer_id,
-                t.business_id,
-                t.amount,
-                t.received_at,
-                CASE
-                    WHEN p.transaction_id IS NULL
-                        AND c.transaction_id IS NULL
-                        AND b.transaction_id IS NULL
-                        THEN 'Created'
-                    WHEN p.status = 'Pending'
-                        OR c.status = 'Pending'
-                        OR b.status = 'Pending'
-                        THEN 'Pending'
-                    WHEN p.transaction_id IS NOT NULL
-                        AND c.transaction_id IS NOT NULL
-                        AND b.transaction_id IS NOT NULL
-                        THEN 'Complete'
-                    ELSE 'Incomplete'
-                END AS pipeline_status,
-                CASE
-                    WHEN b.transaction_id IS NOT NULL THEN 4
-                    WHEN c.transaction_id IS NOT NULL THEN 3
-                    WHEN p.transaction_id IS NOT NULL THEN 2
-                    ELSE 1
-                END AS pipeline_stage
-            FROM transactions t
-            LEFT JOIN processor_records p ON t.transaction_id = p.transaction_id
-            LEFT JOIN card_network_records c ON t.transaction_id = c.transaction_id
-            LEFT JOIN bank_transaction_records b ON t.transaction_id = b.transaction_id
-            ORDER BY t.transaction_id
-            """
-        )
-        return cursor.fetchall()
-    finally:
-        cursor.close()
-        connection.close()
-
 def _insert_transaction(cursor, customer_id: int, business_id: int, amount: float, received_at: datetime) -> int:
     cursor.execute(
         """
@@ -222,14 +166,12 @@ def _propagate_transaction_pipeline(
     amount: float,
     *,
     status: str = "Success",
-    stop_after: str = "bank",
     network_name: Optional[str] = None,
     bank_name: Optional[str] = None,
     rng: Optional[random.Random] = None,
 ) -> Dict[str, Dict[str, Any]]:
     """
     Stages 2–4: processor → card network → bank.
-    stop_after may be processor, network, or bank (default) for partial pipelines.
     Returns metadata for each downstream stage (for API responses and logging).
     """
     processor_time = tx_time + timedelta(seconds=1)
@@ -264,9 +206,6 @@ def _propagate_transaction_pipeline(
             transaction_id,
         ) from exc
 
-    if stop_after == "processor":
-        return stages
-
     try:
         card_network_record_id = _insert_card_network_record(
             cursor, transaction_id, network, status, network_time
@@ -289,9 +228,6 @@ def _propagate_transaction_pipeline(
             f"Failed to create card network record: {exc}",
             transaction_id,
         ) from exc
-
-    if stop_after == "network":
-        return stages
 
     try:
         bank_record_id = _insert_bank_record(
@@ -327,41 +263,8 @@ def _insert_happy_path(cursor, transaction_id: int, tx_time: datetime, amount: f
         tx_time,
         amount,
         status="Success",
-        stop_after="bank",
         rng=rng,
     )
-
-
-def _insert_pending_path(
-    cursor,
-    transaction_id: int,
-    tx_time: datetime,
-    amount: float,
-    rng: random.Random,
-) -> str:
-    """
-    Simulate an in-flight pipeline that stops after processor or card network.
-    Commits only the stages written (safe partial insert within outer transaction).
-    """
-    stop_after = rng.choice(PENDING_STOP_STAGES)
-    processor_time = tx_time + timedelta(seconds=1)
-    network_time = processor_time + timedelta(seconds=1)
-
-    if stop_after == "processor":
-        _insert_processor_record(cursor, transaction_id, "Pending", processor_time)
-        record_pending_pipeline("processor")
-        return stop_after
-
-    _insert_processor_record(cursor, transaction_id, "Success", processor_time)
-    _insert_card_network_record(
-        cursor,
-        transaction_id,
-        rng.choice(NETWORK_NAMES),
-        "Pending",
-        network_time,
-    )
-    record_pending_pipeline("network")
-    return stop_after
 
 
 def _insert_chaos_path(
@@ -573,24 +476,6 @@ def get_transaction_pipeline(transaction_id: int) -> Dict[str, Any]:
         )
         bank_records = cursor.fetchall()
 
-        has_pending = any(
-            row.get("status") == "Pending"
-            for row in (
-                processor_records + card_network_records + bank_records
-            )
-        )
-        pipeline_complete = bool(
-            processor_records and card_network_records and bank_records
-        )
-        if has_pending:
-            pipeline_status = "Pending"
-        elif pipeline_complete:
-            pipeline_status = "Complete"
-        elif processor_records or card_network_records or bank_records:
-            pipeline_status = "Incomplete"
-        else:
-            pipeline_status = "Created"
-
         return {
             "found": True,
             "transaction_id": transaction_id,
@@ -598,8 +483,9 @@ def get_transaction_pipeline(transaction_id: int) -> Dict[str, Any]:
             "processor_records": processor_records,
             "card_network_records": card_network_records,
             "bank_transaction_records": bank_records,
-            "pipeline_complete": pipeline_complete,
-            "pipeline_status": pipeline_status,
+            "pipeline_complete": bool(
+                processor_records and card_network_records and bank_records
+            ),
         }
     finally:
         cursor.close()

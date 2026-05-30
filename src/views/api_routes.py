@@ -2,7 +2,6 @@ from flask import Blueprint, jsonify, request, redirect
 from src.models.transaction_db import (
     TransactionPipelineError,
     fetch_table_records,
-    fetch_transactions_with_pipeline_status,
     get_transaction_pipeline,
     insert_transaction,
     delete_transaction,
@@ -50,7 +49,7 @@ def transaction_route():
 
 @api_bp.route("/api/display_transactions")
 def get_transactions_results_table():
-    return fetch_transactions_with_pipeline_status()
+    return fetch_table_records("transactions")
 
 
 @api_bp.route("/add_transaction", methods=["POST"])
