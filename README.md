@@ -1,6 +1,6 @@
 # RecEngine-Mthree
 
-### Directory Structure
+## Directory Structure
 
 ```
 RECENGINE-MTHREE/
@@ -32,16 +32,66 @@ RECENGINE-MTHREE/
 ├── requirements.txt
 ```
 
-### EC2 instance configuration and run instructions
+---
 
-### One-time setup on EC2 instance
+## Building and Running (Terraform or Docker)
+
+### Terraform Deployment
+
+#### Prerequisites
+
+* **AWS CLI:** Ensure you have the [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html) installed locally.
+
+#### 1. Generate an SSH Key
+
+If you do not already have an SSH key, generate one:
 
 ```bash
-# Install MariaDB
-sudo dnf install -y mariadb105-server
-sudo systemctl start mariadb
-sudo systemctl enable mariadb
-sudo mysql -u root
+ssh-keygen -t rsa -b 4096 -f ~/.ssh/id_rsa
+
+```
+
+#### 2. Configure AWS Credentials
+
+```bash
+aws configure
+
+```
+
+#### 3. Deploy the Infrastructure
+
+```bash
+ cd terraform 
+ terraform init
+ terraform apply
+
+```
+
+#### 4. Monitor Initialization
+
+At this point, the instance is running and visible in your AWS EC2 console. However, it will take approximately 3 minutes for all dependencies to finish installing.
+
+You can monitor the setup progress by SSHing into the instance:
+
+```bash
+ssh -i ~/.ssh/id_rsa ec2-user@<instance-public-ip>
+tail -f -n 10 /var/log/user-data.log
+
+```
+
+Once finalized, the application will be accessible at: `http://<public-ip>/index` <br>
+#### 5. Destroying terraform
+```bash
+terraform destroy
+```
+
+---
+
+### EC2 Instance Configuration and Run Instructions
+
+#### One-Time Setup on EC2 Instance
+
+```bash
 
 # Install Docker
 sudo dnf install -y docker
@@ -61,36 +111,39 @@ BUILDX_VERSION=$(curl -s https://api.github.com/repos/docker/buildx/releases/lat
 curl -L https://github.com/docker/buildx/releases/download/${BUILDX_VERSION}/buildx-${BUILDX_VERSION}.linux-amd64 -o ~/.docker/cli-plugins/docker-buildx
 chmod +x ~/.docker/cli-plugins/docker-buildx
 docker buildx version
+
 ```
 
-### Run containers
+#### Run Containers
 
 ```bash
 docker compose up -d --build && docker image prune -f
+
 ```
 
-### Check running containers
+#### Check Running Containers
 
 ```bash
 docker ps
+
 ```
 
-Access:
+#### Application Access
 
-* [http://your-public-ip/index](http://your-public-ip/index) (requires EC2 inbound rule on port 80)
-* or locally: `curl http://localhost/index`
+* **Remote:** [http://your-public-ip/index](https://www.google.com/search?q=http://your-public-ip/index) *(Requires an EC2 inbound security group rule allowing traffic on port 80)*
+* **Local:** `curl http://localhost/index`
 
-### Logs (HTTP requests + application / DB errors)
+#### View Logs (HTTP requests + application / DB errors)
 
 ```bash
 docker compose logs -f flask
+
 ```
 
-### Stop containers
+#### Stop Containers
 
 ```bash
 docker compose down -v
+
 ```
-
-
 

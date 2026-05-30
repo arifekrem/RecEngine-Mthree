@@ -3,7 +3,7 @@ services: # Different containers to compose
     image: nginx:alpine # docker hub image
     container_name: nginx # container name so its not random
     volumes:
-      - ./nginx.conf:/etc/nginx/conf.d/default.conf # mount the nginx.conf in terminal into the containers default.conf (which is what the container would use internally for nginx)
+      - ./docker/nginx.conf:/etc/nginx/conf.d/default.conf # mount the nginx.conf in terminal into the containers default.conf (which is what the container would use internally for nginx)
                                                     # Editing nginx.conf locally would change what the container uses.
     ports:
       - "80:80" # punches a hole between ec2 instance and container at port 80. http request -> ec2:80 /hole/ -> container:nginx -> ...
@@ -15,10 +15,10 @@ services: # Different containers to compose
   db:
     image: mariadb:11
     environment: # Below are somehow variables that areused to init database
-      MARIADB_ROOT_PASSWORD: xkir23
+      MARIADB_ROOT_PASSWORD: admin
       MARIADB_DATABASE: reconciliation_db
-      MARIADB_USER: rec_user
-      MARIADB_PASSWORD: xkir23
+      MARIADB_USER: admin
+      MARIADB_PASSWORD: admin
     networks: # Add this db service to the internal shared docker network for this compose ecosystem
       - my-network
     volumes:
@@ -30,14 +30,14 @@ services: # Different containers to compose
 
   flask:
     build: # build an image from scratch instead of using pre buitl image
-      context: ./
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: docker/Dockerfile
     container_name: flask
     environment:
       DB_HOST: db
       DB_PORT: 3306
-      DB_USER: rec_user
-      DB_PASSWORD: xkir23
+      DB_USER: admin
+      DB_PASSWORD: admin
       DB_NAME: reconciliation_db
       PYTHONUNBUFFERED: "1"
 
@@ -46,9 +46,7 @@ services: # Different containers to compose
     # docker compose logs -f flask                       
 
     networks: # join this container on the my-network and alias it
-      my-network:
-        aliases:
-          - flask-app # alternative name for the Flask container within the my-network
+      - my-network
 
     depends_on:
       - db
@@ -58,8 +56,8 @@ services: # Different containers to compose
     container_name: prometheus
     volumes:
       - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
-    ports:
-      - "9090:9090"
+    expose:
+      - "9090"
     networks:
       - my-network
     depends_on:
@@ -68,12 +66,19 @@ services: # Different containers to compose
   grafana:
     image: grafana/grafana:11.2.0
     container_name: grafana
-    ports:
-      - "3000:3000"
+    expose:
+      - "3000"
     environment:
       GF_SECURITY_ADMIN_USER: admin
       GF_SECURITY_ADMIN_PASSWORD: admin
       GF_USERS_ALLOW_SIGN_UP: "false"
+
+      # defines the public url that users will use to access grafana
+      # %(protocol)s becomes http dynamically
+      # %(domain)s becomes either ip or domain name (like google.com)
+      GF_SERVER_ROOT_URL: "http://%(domain)s/grafana/"
+
+      GF_SERVER_SERVE_FROM_SUB_PATH: "true"
     volumes:
       - ./grafana/provisioning:/etc/grafana/provisioning:ro
       - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
