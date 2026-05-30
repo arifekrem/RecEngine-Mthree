@@ -49,14 +49,20 @@ def transaction_route():
 
 @api_bp.route("/api/display_transactions")
 def get_transactions_results_table():
-    return fetch_table_records("transactions")
+    try:
+        return fetch_table_records("transactions")
+    except Exception as exc:
+        return jsonify({"error": str(exc)}), 500
 
 
 @api_bp.route("/add_transaction", methods=["POST"])
 def add_transaction():
-    data = request.get_json() or {}
+    data = request.get_json(silent=True) or {}
     required_fields = ("customer_id", "business_id", "amount", "received_at")
-    missing = [field for field in required_fields if field not in data]
+    missing = [
+        field for field in required_fields
+        if field not in data or data[field] in (None, "")
+    ]
     if missing:
         return jsonify({
             "error": "Missing required fields",
@@ -77,6 +83,11 @@ def add_transaction():
             "transaction_id": exc.transaction_id,
             "message": f"Transaction pipeline failed at stage: {exc.stage}",
         }), 422
+    except Exception as exc:
+        return jsonify({
+            "error": str(exc),
+            "message": "Unexpected error while creating transaction",
+        }), 500
 
     return jsonify({
         "message": "Transaction processed through all pipeline stages",

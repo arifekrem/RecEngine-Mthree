@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 import random
 from datetime import datetime, timedelta
+from decimal import Decimal
 from typing import Any, Dict, Optional, Union
 
 from src.observability.metrics import (
@@ -122,6 +123,18 @@ def generate_simulation_batch(
         cursor.close()
         connection.close()
         
+def _json_safe_row(row: Dict[str, Any]) -> Dict[str, Any]:
+    safe: Dict[str, Any] = {}
+    for key, value in row.items():
+        if isinstance(value, datetime):
+            safe[key] = value.isoformat(sep=" ")
+        elif isinstance(value, Decimal):
+            safe[key] = float(value)
+        else:
+            safe[key] = value
+    return safe
+
+
 def fetch_table_records(table_name):
     try:
         connection = get_db_connection()
@@ -129,8 +142,8 @@ def fetch_table_records(table_name):
         
         # No sql injections because table name is whitelisted, and col_str is not accessible by users.
         cursor.execute(f"SELECT * FROM {table_name}") 
-        table_data = cursor.fetchall() # a dictionary
-        return table_data
+        table_data = cursor.fetchall()
+        return [_json_safe_row(row) for row in table_data]
     finally:
         cursor.close()
         connection.close()

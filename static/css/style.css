@@ -193,6 +193,20 @@ button:hover {
     opacity: 0.9;
 }
 
+.form-status {
+    margin-top: 12px;
+    font-size: 14px;
+    min-height: 1.25rem;
+}
+
+.form-status.error {
+    color: #dc2626;
+}
+
+.form-status.success {
+    color: #16a34a;
+}
+
 .edit-btn {
     background: #f59e0b;
     margin-right: 5px;

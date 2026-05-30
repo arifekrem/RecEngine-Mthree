@@ -4,13 +4,50 @@ let editingTransactionId = null;
 const tableBody = document.getElementById("transactionsTable");
 const form = document.getElementById("transactionForm");
 const searchInput = document.getElementById("searchInput");
-const submitButton = form.querySelector("button");
+const submitButton = document.getElementById("submitTransactionBtn");
+const formStatus = document.getElementById("formStatus");
+
+function setFormStatus(message, isError = false) {
+    if (!formStatus) return;
+    formStatus.textContent = message;
+    formStatus.className = isError ? "form-status error" : "form-status success";
+}
+
+async function parseJsonResponse(response) {
+    const text = await response.text();
+    if (!text) {
+        return {};
+    }
+    try {
+        return JSON.parse(text);
+    } catch {
+        throw new Error(
+            `Server returned non-JSON (HTTP ${response.status}). Is the flask container running?`
+        );
+    }
+}
 
 async function loadTransactions() {
-    const response = await fetch("/api/display_transactions");
-    transactions = await response.json();
+    try {
+        const response = await fetch("/api/display_transactions");
+        const data = await parseJsonResponse(response);
 
-    renderTransactions();
+        if (!response.ok || !Array.isArray(data)) {
+            transactions = [];
+            setFormStatus(
+                data.error || "Could not load transactions from the server.",
+                true
+            );
+        } else {
+            transactions = data;
+        }
+
+        renderTransactions();
+    } catch (error) {
+        transactions = [];
+        renderTransactions();
+        setFormStatus(error.message, true);
+    }
 }
 
 function renderTransactions() {
@@ -62,6 +99,7 @@ function editTransaction(id) {
     document.getElementById("receivedAt").value = formattedDate;
 
     submitButton.innerText = "Update Transaction";
+    setFormStatus("");
 }
 
 async function deleteTransaction(id) {
@@ -69,11 +107,20 @@ async function deleteTransaction(id) {
 
     if (!confirmed) return;
 
-    await fetch(`/delete_transaction/${id}`, {
-        method: "DELETE"
-    });
-
-    loadTransactions();
+    try {
+        const response = await fetch(`/delete_transaction/${id}`, {
+            method: "DELETE"
+        });
+        const data = await parseJsonResponse(response);
+        if (!response.ok) {
+            setFormStatus(data.error || data.message || "Delete failed.", true);
+            return;
+        }
+        setFormStatus(data.message || "Transaction deleted.");
+        await loadTransactions();
+    } catch (error) {
+        setFormStatus(error.message, true);
+    }
 }
 
 searchInput.addEventListener("input", renderTransactions);
@@ -81,28 +128,45 @@ searchInput.addEventListener("input", renderTransactions);
 form.addEventListener("submit", async function(event) {
     event.preventDefault();
 
+    if (!form.reportValidity()) {
+        setFormStatus("Please fill in all required fields, including date and time.", true);
+        return;
+    }
+
     const transactionData = {
-        customer_id: document.getElementById("customerId").value,
-        business_id: document.getElementById("businessId").value,
-        amount: document.getElementById("amount").value,
-        received_at: document.getElementById("receivedAt").value
+        customer_id: document.getElementById("customerId").value.trim(),
+        business_id: document.getElementById("businessId").value.trim(),
+        amount: document.getElementById("amount").value.trim(),
+        received_at: document.getElementById("receivedAt").value.trim()
     };
 
-    if (editingTransactionId) {
-        const response = await fetch(`/update_transaction/${editingTransactionId}`, {
-            method: "PUT",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify(transactionData)
-        });
+    submitButton.disabled = true;
+    setFormStatus("Saving transaction...");
 
-        const data = await response.json();
-        alert(data.message);
+    try {
+        if (editingTransactionId) {
+            const response = await fetch(`/update_transaction/${editingTransactionId}`, {
+                method: "PUT",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify(transactionData)
+            });
 
-        editingTransactionId = null;
-        submitButton.innerText = "Add Transaction";
-    } else {
+            const data = await parseJsonResponse(response);
+            if (!response.ok) {
+                setFormStatus(data.error || data.message || "Update failed.", true);
+                return;
+            }
+
+            setFormStatus(data.message || "Transaction updated.");
+            editingTransactionId = null;
+            submitButton.innerText = "Add Transaction";
+            form.reset();
+            await loadTransactions();
+            return;
+        }
+
         const response = await fetch("/add_transaction", {
             method: "POST",
             headers: {
@@ -111,21 +175,26 @@ form.addEventListener("submit", async function(event) {
             body: JSON.stringify(transactionData)
         });
 
-        const data = await response.json();
+        const data = await parseJsonResponse(response);
         if (!response.ok) {
-            const stage = data.failed_stage ? `\nStage: ${data.failed_stage}` : "";
-            alert(`${data.error || data.message}${stage}`);
-        } else {
-            const stageSummary = data.stages
-                ? Object.keys(data.stages).join(" → ")
-                : "";
-            console.log("Pipeline stages:", data.stages);
-            alert(`${data.message}\nStages: ${stageSummary}`);
+            const stage = data.failed_stage ? ` (stage: ${data.failed_stage})` : "";
+            setFormStatus(`${data.error || data.message}${stage}`, true);
+            return;
         }
-    }
 
-    form.reset();
-    loadTransactions();
+        const stageSummary = data.stages
+            ? Object.keys(data.stages).join(" → ")
+            : "";
+        setFormStatus(
+            `${data.message}${stageSummary ? ` — ${stageSummary}` : ""}`
+        );
+        form.reset();
+        await loadTransactions();
+    } catch (error) {
+        setFormStatus(error.message, true);
+    } finally {
+        submitButton.disabled = false;
+    }
 });
 
 loadTransactions();
