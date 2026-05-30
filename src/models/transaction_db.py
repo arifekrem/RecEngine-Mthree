@@ -502,10 +502,10 @@ def get_transaction_pipeline(transaction_id: int) -> Dict[str, Any]:
         return {
             "found": True,
             "transaction_id": transaction_id,
-            "transaction": transaction,
-            "processor_records": processor_records,
-            "card_network_records": card_network_records,
-            "bank_transaction_records": bank_records,
+            "transaction": _json_safe_row(transaction),
+            "processor_records": [_json_safe_row(r) for r in processor_records],
+            "card_network_records": [_json_safe_row(r) for r in card_network_records],
+            "bank_transaction_records": [_json_safe_row(r) for r in bank_records],
             "pipeline_complete": bool(
                 processor_records and card_network_records and bank_records
             ),
