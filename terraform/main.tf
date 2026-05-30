@@ -3,6 +3,16 @@ provider "aws" {
 
 }
 
+# locals creates a private reusable variable
+# templatefile(path, variables) function takes in paths, variables
+# ${path.module}/../ --> ${path.module}: Points to projectroot/terraform/
+# public_ip = aws_instance.app.public_ip defines a key value pair.
+locals {
+  compose_rendered = templatefile("${path.module}/../docker-compose.yml", { 
+    public_ip = aws_instance.app.public_ip
+  })
+}
+
 data "aws_ami" "amazon_linux_2023" {
   most_recent = true
 
@@ -80,6 +90,8 @@ resource "aws_instance" "app" {
         # Clone and start app
         git clone https://github.com/arifekrem/RecEngine-Mthree.git /rec_engine
         cd /rec_engine
+        git switch Kirill_branch
+
         docker compose up -d --build   # -d = detached (runs in background)
     EOF
   
@@ -89,6 +101,6 @@ resource "aws_instance" "app" {
 }
 
 output "instance_public_ip" {
-  value       = aws_instance.app.public_ip
+  value = aws_instance.app.public_ip
   description = "SSH: ssh ec2-user@$(terraform output -raw instance_public_ip)"
 }
