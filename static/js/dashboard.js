@@ -7,12 +7,10 @@ async function loadDashboard() {
     const totalTransactions = results.length;
     const matches = results.filter(r => r.status === "Match").length;
     const mismatches = results.filter(r => r.status !== "Match").length;
-    const pending = 0;
 
     document.getElementById("totalTransactions").innerText = totalTransactions;
     document.getElementById("matches").innerText = matches;
     document.getElementById("mismatches").innerText = mismatches;
-    document.getElementById("pending").innerText = pending;
 
     const tableBody = document.getElementById("resultsTable");
     tableBody.innerHTML = "";
@@ -33,10 +31,10 @@ async function loadDashboard() {
         tableBody.appendChild(row);
     });
 
-    updateChart(matches, mismatches, pending);
+    updateChart(matches, mismatches);
 }
 
-function updateChart(matches, mismatches, pending) {
+function updateChart(matches, mismatches) {
     const ctx = document.getElementById("transactionChart");
 
     if (transactionChart) {
@@ -46,10 +44,10 @@ function updateChart(matches, mismatches, pending) {
     transactionChart = new Chart(ctx, {
         type: "doughnut",
         data: {
-            labels: ["Matches", "Mismatches", "Pending"],
+            labels: ["Matches", "Mismatches"],
             datasets: [{
-                data: [matches, mismatches, pending],
-                backgroundColor: ["#16a34a", "#dc2626", "#f59e0b"]
+                data: [matches, mismatches],
+                backgroundColor: ["#16a34a", "#dc2626"]
             }]
         },
         options: {

@@ -14,30 +14,33 @@ services: # Different containers to compose
 
   db:
     image: mariadb:11
-    environment: # Below are somehow variables that areused to init database
-      MARIADB_ROOT_PASSWORD: admin
+    environment:
+      MARIADB_ROOT_PASSWORD: rootsecret
       MARIADB_DATABASE: reconciliation_db
-      MARIADB_USER: admin
-      MARIADB_PASSWORD: admin
-    networks: # Add this db service to the internal shared docker network for this compose ecosystem
+      MARIADB_USER: rec_user
+      MARIADB_PASSWORD: recengine
+    networks:
       - my-network
     volumes:
-      - db_data:/var/lib/mysql # Docker creates and manages a storage volume: "db_data" in /var/lib/docker/volumes/
-                               # and mounts it to a folder: "/var/lib/mysql" inside the container
-                               # so everything written in /var/lib/mysql in container is also written to db_data on EC2 vm.
-      - ./src/models/schema.sql:/docker-entrypoint-initdb.d/init.sql # /docker-entrypoint-initdb.d/ is a convention built into mysql:8 image. On first startup, run all .sql files in that folder (DDL, DML).
-                                                                     # therefore take the init.sql file in the terminal and mount it to /docker-entrypoint-initdb.d/init.sql
+      - db_data:/var/lib/mysql
+      - ./src/models/schema.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
 
   flask:
-    build: # build an image from scratch instead of using pre buitl image
+    build:
       context: .
       dockerfile: docker/Dockerfile
     container_name: flask
     environment:
       DB_HOST: db
-      DB_PORT: 3306
-      DB_USER: admin
-      DB_PASSWORD: admin
+      DB_PORT: "3306"
+      DB_USER: rec_user
+      DB_PASSWORD: recengine
       DB_NAME: reconciliation_db
       PYTHONUNBUFFERED: "1"
 
@@ -49,7 +52,8 @@ services: # Different containers to compose
       - my-network
 
     depends_on:
-      - db
+      db:
+        condition: service_healthy
 
   prometheus:
     image: prom/prometheus:v2.53.0

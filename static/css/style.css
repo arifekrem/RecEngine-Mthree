@@ -193,6 +193,20 @@ button:hover {
     opacity: 0.9;
 }
 
+.form-status {
+    margin-top: 12px;
+    font-size: 14px;
+    min-height: 1.25rem;
+}
+
+.form-status.error {
+    color: #dc2626;
+}
+
+.form-status.success {
+    color: #16a34a;
+}
+
 .edit-btn {
     background: #f59e0b;
     margin-right: 5px;
@@ -258,14 +272,44 @@ button:hover {
     border-radius: 10px;
     text-align: center;
     font-weight: bold;
+    color: #4b5563;
+    border: 2px solid transparent;
+    transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
 }
 
-.flow-step.active {
-    background: #2563eb;
-    color: white;
+.flow-step--inactive {
+    background: #e5e7eb;
+    color: #6b7280;
+}
+
+.flow-step--success {
+    background: #16a34a;
+    color: #ffffff;
+    border-color: #15803d;
+}
+
+.flow-step--error {
+    background: #dc2626;
+    color: #ffffff;
+    border-color: #b91c1c;
+}
+
+.flow-inspect-label {
+    color: #374151;
+    font-weight: 600;
+    margin-bottom: 12px;
 }
 
 .flow-note {
     color: #6b7280;
     margin-top: 15px;
+}
+
+tr.row-selected {
+    background-color: #dbeafe !important;
+}
+
+.inspect-btn {
+    background: #2563eb;
+    margin-right: 5px;
 }
