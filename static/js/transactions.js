@@ -2,9 +2,56 @@ let transactions = [];
 let editingTransactionId = null;
 
 const tableBody = document.getElementById("transactionsTable");
-const form = document.getElementById("transactionForm");
+
+const singleTransactionForm = document.getElementById("singleTransactionForm");
+const BatchTransactionForm = document.getElementById("BatchTransactionForm");
+
 const searchInput = document.getElementById("searchInput");
-const submitButton = form.querySelector("button");
+
+const singleTxSubmitButton = document.getElementById("singleTxSubmitButton");
+const batchTxSubmitButton = document.getElementById("batchTxSubmitButton");
+
+const txButtons = document.querySelectorAll(".txSelectionButton");
+
+txButtons.forEach(btn => {
+	btn.addEventListener('click', () => {
+		
+		tabs = document.querySelectorAll(".transactionOption")
+		tabs.forEach(tab => {tab.classList.add("hidden")})
+		
+		currentTab = document.getElementById(btn.dataset.target)
+		currentTab.classList.remove("hidden")
+		
+	})
+	
+});
+
+async function addTransactionBatch(event){
+    event.preventDefault();
+
+    const simulationData = {
+        total_records: Number(document.getElementById("total_records").value),
+        chaos_ratio: Number(document.getElementById("chaos_ratio").value),
+    };
+
+
+    const res = await fetch("/add_transaction_batch", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify(simulationData)
+    });
+
+    const data = await res.json();
+    console.log(data);
+    if (res.ok) {
+        BatchTransactionForm.reset();
+        loadTransactions();
+    }
+}
+
+BatchTransactionForm.addEventListener('submit', addTransactionBatch)
 
 async function loadTransactions() {
     const response = await fetch("/api/display_transactions");
@@ -61,7 +108,7 @@ function editTransaction(id) {
     const formattedDate = date.toISOString().slice(0, 16);
     document.getElementById("receivedAt").value = formattedDate;
 
-    submitButton.innerText = "Update Transaction";
+    singleTxSubmitButton.innerText = "Update Transaction";
 }
 
 async function deleteTransaction(id) {
@@ -78,7 +125,7 @@ async function deleteTransaction(id) {
 
 searchInput.addEventListener("input", renderTransactions);
 
-form.addEventListener("submit", async function(event) {
+singleTransactionForm.addEventListener("submit", async function(event) {
     event.preventDefault();
 
     const transactionData = {
@@ -101,7 +148,7 @@ form.addEventListener("submit", async function(event) {
         alert(data.message);
 
         editingTransactionId = null;
-        submitButton.innerText = "Add Transaction";
+        singleTxSubmitButton.innerText = "Add Transaction";
     } else {
         const response = await fetch("/add_transaction", {
             method: "POST",
@@ -124,7 +171,7 @@ form.addEventListener("submit", async function(event) {
         }
     }
 
-    form.reset();
+    singleTransactionForm.reset();
     loadTransactions();
 });
 

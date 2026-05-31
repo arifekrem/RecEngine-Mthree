@@ -167,10 +167,21 @@ tr:hover {
     margin-bottom: 30px;
 }
 
-form {
+#singleTransactionForm {
     display: grid;
     grid-template-columns: repeat(5, minmax(150px, 1fr));
     gap: 10px;
+}
+
+#BatchTransactionForm {
+    display:flex; 
+    align-items:center; 
+    gap:10px;
+    flex-wrap: wrap;
+}
+.flex-grow-input {
+    flex: 1;
+    min-width: 120px;
 }
 
 input {
@@ -268,4 +279,8 @@ button:hover {
 .flow-note {
     color: #6b7280;
     margin-top: 15px;
+}
+
+.hidden {
+  display: none;
 }
