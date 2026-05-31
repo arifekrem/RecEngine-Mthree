@@ -116,11 +116,13 @@ def _refresh_latest_reconciliation_run_gauges(cursor) -> None:
 
 def refresh_db_gauges() -> None:
     """Refresh gauges from MySQL so Prometheus scrapes current table state."""
-    from src.models.db_pool import get_db_connection
+    from src.models.db_pool import close_db_resources, get_db_connection
 
-    connection = get_db_connection()
-    cursor = connection.cursor()
+    connection = None
+    cursor = None
     try:
+        connection = get_db_connection()
+        cursor = connection.cursor()
         cursor.execute("SELECT COUNT(*) FROM transactions")
         TRANSACTIONS_IN_DB.set(cursor.fetchone()[0])
 
@@ -145,5 +147,4 @@ def refresh_db_gauges() -> None:
         logger.exception("Failed to refresh DB gauges for Prometheus")
         raise
     finally:
-        cursor.close()
-        connection.close()
+        close_db_resources(connection, cursor)

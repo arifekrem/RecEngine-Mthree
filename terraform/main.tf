@@ -90,9 +90,7 @@ resource "aws_instance" "app" {
         # Clone and start app
         git clone https://github.com/arifekrem/RecEngine-Mthree.git /rec_engine
         cd /rec_engine
-        git switch Kirill_branch
-
-        docker compose up -d --build   # -d = detached (runs in background)
+        docker compose up -d --build 
     EOF
   
   tags = {

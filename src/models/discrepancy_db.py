@@ -1,4 +1,4 @@
-from .db_pool import get_db_connection
+from .db_pool import close_db_resources, get_db_connection
 
 SHARED_RECON_CORE = """
     transactions t
@@ -7,23 +7,26 @@ SHARED_RECON_CORE = """
     LEFT JOIN bank_transaction_records b ON t.transaction_id = b.transaction_id
 """
 
+
 def _insert_into_reconciliation_runs(start_time, end_time):
+    connection = None
+    cursor = None
     try:
         connection = get_db_connection()
         cursor = connection.cursor()
         query = f"""
         INSERT INTO reconciliation_runs (start_time, end_time, records_checked, num_mismatches)
-        SELECT 
-            %s as start_time,
-            %s as end_time,
-            COUNT(*) as records_checked,
-            SUM(CASE 
+        SELECT
+            %s AS start_time,
+            %s AS end_time,
+            COUNT(*) AS records_checked,
+            SUM(CASE
                 WHEN (p.transaction_id IS NULL OR c.transaction_id IS NULL OR b.transaction_id IS NULL) OR
-                t.amount <> b.amount OR 
+                t.amount <> b.amount OR
                 NOT (t.received_at <= p.received_at AND p.received_at <= c.received_at AND c.received_at <= b.received_at) OR
-                NOT (p.status = c.status AND c.status = b.status) 
+                NOT (p.status = c.status AND c.status = b.status)
                 THEN 1 ELSE 0
-            END) as num_mismatches
+            END) AS num_mismatches
         FROM {SHARED_RECON_CORE};
         """
         cursor.execute(query, (start_time, end_time))
@@ -44,39 +47,43 @@ def _insert_into_reconciliation_runs(start_time, end_time):
             "num_mismatches": int(row[1] or 0),
         }
     finally:
-        cursor.close()
-        connection.close()
+        close_db_resources(connection, cursor)
+
 
 def _insert_into_reconciliation_results(run_id):
+    connection = None
+    cursor = None
     try:
         connection = get_db_connection()
         cursor = connection.cursor()
         query = f"""
         INSERT INTO reconciliation_results (run_id, transaction_id, status)
-        SELECT 
-            %s as run_id,
-            t.transaction_id, 
-            (CASE 
+        SELECT
+            %s AS run_id,
+            t.transaction_id,
+            (CASE
                 WHEN p.transaction_id IS NULL OR c.transaction_id IS NULL OR b.transaction_id IS NULL
-                THEN "MissingDownstream" 
+                THEN 'MissingDownstream'
 
                 WHEN t.amount <> b.amount
-                THEN "AmountMismatch"
+                THEN 'AmountMismatch'
 
-                WHEN NOT (t.received_at <= p.received_at AND p.received_at <= c.received_at AND c.received_at <= b.received_at)
-                THEN "OrderMismatch"
+                WHEN NOT (
+                    t.received_at <= p.received_at
+                    AND p.received_at <= c.received_at
+                    AND c.received_at <= b.received_at
+                )
+                THEN 'OrderMismatch'
 
                 WHEN NOT (p.status = c.status AND c.status = b.status)
-                THEN "StatusMismatch"
+                THEN 'StatusMismatch'
 
-                ELSE "Match"
-            END) as "status"
-
-            FROM {SHARED_RECON_CORE};  
+                ELSE 'Match'
+            END) AS status
+        FROM {SHARED_RECON_CORE};
         """
         cursor.execute(query, (run_id,))
         connection.commit()
         return int(cursor.lastrowid)
     finally:
-        cursor.close()
-        connection.close()
+        close_db_resources(connection, cursor)
