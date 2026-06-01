@@ -108,7 +108,7 @@
           "color": {
             "mode": "palette-classic"
           },
-          "unit": "short"
+          "unit": "ops"
         },
         "overrides": []
       },
@@ -125,12 +125,12 @@
           "placement": "bottom"
         },
         "tooltip": {
-          "mode": "single"
+          "mode": "multi"
         }
       },
       "targets": [
         {
-          "expr": "sum by (stage) (recengine_pipeline_failures_total)",
+          "expr": "sum(rate(recengine_pipeline_failures_total[5m])) by (stage)",
           "legendFormat": "{{stage}}",
           "refId": "A"
         }

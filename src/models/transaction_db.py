@@ -8,6 +8,7 @@ from typing import Any, Dict, Optional, Union
 
 from src.observability.metrics import (
     record_pipeline_failure,
+    record_simulation_anomaly,
     record_simulation_batch,
     record_transaction_created,
     record_transaction_deleted,
@@ -105,6 +106,7 @@ def generate_simulation_batch(
                 ("MissingDownstream", "AmountMismatch", "StatusMismatch", "OrderMismatch")
             )
             _insert_chaos_path(cursor, transaction_id, tx_time, amount, anomaly, rng)
+            record_simulation_anomaly(anomaly)
             counters["chaos"] += 1
 
             if anomaly == "MissingDownstream":

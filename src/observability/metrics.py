@@ -77,6 +77,26 @@ def record_pipeline_failure(stage: str) -> None:
     PIPELINE_FAILURES.labels(stage=stage or "unknown").inc()
 
 
+# Maps simulation anomaly names to meaningful pipeline stage labels.
+_ANOMALY_TO_STAGE: Dict[str, str] = {
+    "MissingDownstream": "missing_downstream",
+    "AmountMismatch": "amount_mismatch",
+    "StatusMismatch": "status_mismatch",
+    "OrderMismatch": "order_mismatch",
+}
+
+
+def record_simulation_anomaly(anomaly: str) -> None:
+    """Increment pipeline_failures_total for a chaos-injected anomaly.
+
+    Called once per anomalous transaction produced by generate_simulation_batch()
+    so that the Grafana 'Pipeline failures by stage' panel reflects simulation
+    chaos activity, not just hard TransactionPipelineError exceptions.
+    """
+    stage = _ANOMALY_TO_STAGE.get(anomaly, "unknown")
+    PIPELINE_FAILURES.labels(stage=stage).inc()
+
+
 def record_simulation_batch(counters: Dict[str, int]) -> None:
     SIMULATION_BATCHES.inc()
     SIMULATION_TRANSACTIONS.labels(kind="good").inc(counters.get("good", 0))
