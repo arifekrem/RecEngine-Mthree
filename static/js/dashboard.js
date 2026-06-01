@@ -15,7 +15,8 @@ async function loadDashboard() {
     const tableBody = document.getElementById("resultsTable");
     tableBody.innerHTML = "";
 
-    results.slice(0, 5).forEach(result => {
+    const recentResults = [...results].sort((a, b) => b.result_id - a.result_id).slice(0, 5);
+    recentResults.forEach(result => {
         const row = document.createElement("tr");
 
         row.innerHTML = `
