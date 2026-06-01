@@ -32,10 +32,10 @@ const FLOW_STATE_CLASS = {
 txButtons.forEach(btn => {
 	btn.addEventListener('click', () => {
 		
-		tabs = document.querySelectorAll(".transactionOption")
+		const tabs = document.querySelectorAll(".transactionOption")
 		tabs.forEach(tab => {tab.classList.add("hidden")})
 		
-		currentTab = document.getElementById(btn.dataset.target)
+		const currentTab = document.getElementById(btn.dataset.target)
 		currentTab.classList.remove("hidden")
 		
 	})
@@ -331,7 +331,7 @@ searchInput.addEventListener("input", renderTransactions);
 singleTransactionForm.addEventListener("submit", async function (event) {
     event.preventDefault();
 
-    if (!form.reportValidity()) {
+    if (!singleTransactionForm.reportValidity()) {
         setFormStatus("Please fill in all required fields, including date and time.", true);
         return;
     }
@@ -342,8 +342,7 @@ singleTransactionForm.addEventListener("submit", async function (event) {
         amount: document.getElementById("amount").value.trim(),
         received_at: document.getElementById("receivedAt").value.trim(),
     };
-
-    submitButton.disabled = true;
+    singleTxSubmitButton.disabled = true;
     setFormStatus("Saving transaction...");
 
     try {
@@ -365,8 +364,8 @@ singleTransactionForm.addEventListener("submit", async function (event) {
             setFormStatus(data.message || "Transaction updated.");
             const updatedId = editingTransactionId;
             editingTransactionId = null;
-            submitButton.innerText = "Add Transaction";
-            form.reset();
+            singleTxSubmitButton.innerText = "Add Transaction";
+            singleTransactionForm.reset();
             await loadTransactions();
             await inspectTransaction(updatedId);
             return;
@@ -389,7 +388,7 @@ singleTransactionForm.addEventListener("submit", async function (event) {
 
         const stageSummary = data.stages ? Object.keys(data.stages).join(" → ") : "";
         setFormStatus(`${data.message}${stageSummary ? ` — ${stageSummary}` : ""}`);
-        form.reset();
+        singleTransactionForm.reset();
         await loadTransactions();
         if (data.transaction_id) {
             await inspectTransaction(data.transaction_id);
