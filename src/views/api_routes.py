@@ -37,9 +37,7 @@ def run_reconciliation():
     run_reconciliation_process()
     return fetch_table_records("reconciliation_results")
 
-@api_bp.route("/api/reconciliation_results")
-def get_reconciliation_results_table():
-    return fetch_table_records("reconciliation_results")
+
 
 
 # Transactions page
