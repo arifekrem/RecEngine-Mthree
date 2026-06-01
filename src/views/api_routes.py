@@ -94,7 +94,15 @@ def add_transaction():
         "transaction_id": result["transaction_id"],
         "stages": result["stages"],
     }), 201
-
+    
+@api_bp.route("/add_transaction_batch", methods=["POST"])
+def test_simulation_run():
+    data = request.get_json()
+    simulation_batch = run_simulation(
+        total_records=data["total_records"], 
+        chaos_ratio=data["chaos_ratio"]
+    )
+    return jsonify(simulation_batch), 200
 
 @api_bp.route("/transaction_pipeline/<int:transaction_id>")
 def transaction_pipeline_status(transaction_id):
@@ -134,11 +142,6 @@ def update_transaction_route(transaction_id):
 
 
     """ test routes """
-
-@api_bp.route("/run_simulation")
-def test_simulation_run():
-    simulation_batch = run_simulation()
-    return jsonify(simulation_batch), 200
 
 @api_bp.route("/transaction_table")
 def test1():

@@ -3,9 +3,17 @@ let editingTransactionId = null;
 let selectedTransactionId = null;
 
 const tableBody = document.getElementById("transactionsTable");
-const form = document.getElementById("transactionForm");
+
+const singleTransactionForm = document.getElementById("singleTransactionForm");
+const BatchTransactionForm = document.getElementById("BatchTransactionForm");
+
 const searchInput = document.getElementById("searchInput");
-const submitButton = document.getElementById("submitTransactionBtn");
+
+const singleTxSubmitButton = document.getElementById("singleTxSubmitButton");
+const batchTxSubmitButton = document.getElementById("batchTxSubmitButton");
+
+const txButtons = document.querySelectorAll(".txSelectionButton");
+
 const formStatus = document.getElementById("formStatus");
 const pipelineInspectLabel = document.getElementById("pipelineInspectLabel");
 const flowSteps = [
@@ -20,6 +28,46 @@ const FLOW_STATE_CLASS = {
     success: "flow-step--success",
     error: "flow-step--error",
 };
+
+txButtons.forEach(btn => {
+	btn.addEventListener('click', () => {
+		
+		const tabs = document.querySelectorAll(".transactionOption")
+		tabs.forEach(tab => {tab.classList.add("hidden")})
+		
+		const currentTab = document.getElementById(btn.dataset.target)
+		currentTab.classList.remove("hidden")
+		
+	})
+	
+});
+
+async function addTransactionBatch(event){
+    event.preventDefault();
+
+    const simulationData = {
+        total_records: Number(document.getElementById("total_records").value),
+        chaos_ratio: Number(document.getElementById("chaos_ratio").value),
+    };
+
+
+    const res = await fetch("/add_transaction_batch", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify(simulationData)
+    });
+
+    const data = await res.json();
+    console.log(data);
+    if (res.ok) {
+        BatchTransactionForm.reset();
+        loadTransactions();
+    }
+}
+
+BatchTransactionForm.addEventListener('submit', addTransactionBatch)
 
 function setFormStatus(message, isError = false) {
     if (!formStatus) return;
@@ -247,7 +295,7 @@ function editTransaction(id) {
     const formattedDate = date.toISOString().slice(0, 16);
     document.getElementById("receivedAt").value = formattedDate;
 
-    submitButton.innerText = "Update Transaction";
+    singleTxSubmitButton.innerText = "Update Transaction";
     setFormStatus("");
 }
 
@@ -280,10 +328,10 @@ async function deleteTransaction(id) {
 
 searchInput.addEventListener("input", renderTransactions);
 
-form.addEventListener("submit", async function (event) {
+singleTransactionForm.addEventListener("submit", async function (event) {
     event.preventDefault();
 
-    if (!form.reportValidity()) {
+    if (!singleTransactionForm.reportValidity()) {
         setFormStatus("Please fill in all required fields, including date and time.", true);
         return;
     }
@@ -294,8 +342,7 @@ form.addEventListener("submit", async function (event) {
         amount: document.getElementById("amount").value.trim(),
         received_at: document.getElementById("receivedAt").value.trim(),
     };
-
-    submitButton.disabled = true;
+    singleTxSubmitButton.disabled = true;
     setFormStatus("Saving transaction...");
 
     try {
@@ -317,8 +364,8 @@ form.addEventListener("submit", async function (event) {
             setFormStatus(data.message || "Transaction updated.");
             const updatedId = editingTransactionId;
             editingTransactionId = null;
-            submitButton.innerText = "Add Transaction";
-            form.reset();
+            singleTxSubmitButton.innerText = "Add Transaction";
+            singleTransactionForm.reset();
             await loadTransactions();
             await inspectTransaction(updatedId);
             return;
@@ -341,7 +388,7 @@ form.addEventListener("submit", async function (event) {
 
         const stageSummary = data.stages ? Object.keys(data.stages).join(" → ") : "";
         setFormStatus(`${data.message}${stageSummary ? ` — ${stageSummary}` : ""}`);
-        form.reset();
+        singleTransactionForm.reset();
         await loadTransactions();
         if (data.transaction_id) {
             await inspectTransaction(data.transaction_id);
@@ -349,7 +396,7 @@ form.addEventListener("submit", async function (event) {
     } catch (error) {
         setFormStatus(error.message, true);
     } finally {
-        submitButton.disabled = false;
+        singleTxSubmitButton.disabled = false;
     }
 });
 
