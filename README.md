@@ -5,31 +5,58 @@
 ```
 RECENGINE-MTHREE/
 │
-├── src/
+├── docker/                      # Docker configuration
+│   ├── Dockerfile               # Flask container build file
+│   └── nginx.conf               # Nginx reverse proxy configuration
+│
+├── grafana/                     # Grafana dashboards & provisioning
+│   ├── dashboards/              # Grafana dashboard JSON exports
+│   │   └── transactions.json
+│   └── provisioning/            # Automatic datasource & dashboard provisioning
+│       ├── dashboards/
+│       │   └── default.yml
+│       └── datasources/
+│           └── datasource.yml
+│
+├── prometheus/                  # Prometheus monitoring configuration
+│   └── prometheus.yml
+│
+├── src/                         # Python backend source code
 │   ├── controllers/             # Business Logic Coordination
-│   │   ├── reconcile.py         # categorizes transactions across all tables (match/mismatch)
-│   │   └── simulate.py          # simulates good and bad transactions
+│   │   ├── reconcile.py         # Categorizes transactions across all tables (match/mismatch)
+│   │   └── simulate.py          # Simulates good and bad transactions
 │   │
 │   ├── models/                  # MODEL LAYER: Database Interactions
 │   │   ├── db_pool.py           # MySQL Connector connection pool setup
 │   │   ├── discrepancy_db.py    # SQL executions for recording mismatched entries
-│   │   ├── schema.sql
+│   │   ├── schema.sql           # Database schema definition
 │   │   └── transaction_db.py    # SQL executions for reading/writing transactions
 │   │
-│   ├── views/                   # HTTP Routes / Js
-│   │   ├── api_routes.py
-│   │   ├── index.html
-│   │   ├── reconciliation.html
-│   │   ├── transactions.html
+│   ├── observability/           # Application metrics & tracking
+│   │   └── metrics.py           # Prometheus instrumentations
+│   │
+│   └── views/                   # HTTP Routes / Endpoints
+│       └── api_routes.py        # Flask blueprint and API routes
 │
-├── static/
+├── static/                      # Frontend static assets
+│   ├── css/
+│   │   └── style.css            # Custom CSS styling
 │   ├── js/
-│   ├── app.js
-│   ├── index.html
-│   └── style.css
-├── app.py                      # Entry point
-├── Project-Description.md
-├── requirements.txt
+│   │   ├── dashboard.js         # Metrics / analytics scripting
+│   │   ├── reconciliation.js    # Reconciliation page scripts
+│   │   └── transactions.js      # Transactions view and execution scripts
+│   ├── index.html               # Main dashboard UI
+│   ├── reconciliation.html      # Reconciliation summary and details UI
+│   └── transactions.html        # Transactions list UI
+│
+├── terraform/                   # AWS Infrastructure as Code
+│   ├── main.tf                  # EC2, VPC, Security Groups definitions
+│   ├── terraform.tf             # Terraform provider configuration
+│   └── variables.tf             # AWS deployment variables
+│
+├── app.py                       # Main Flask entrypoint
+├── docker-compose.yml           # Multi-container setup (Flask, MySQL, Prometheus, Grafana, Nginx)
+└── requirements.txt             # Python dependencies
 ```
 
 ---
